@@ -1,0 +1,10 @@
+package com.bessky.common.jdbc.service.impl;
+
+/**
+ * 自定义通用服务接口实现类
+ *
+ * @author x
+ * @date 2020/9/1
+ */
+public class MyServiceImpl<M extends MyBaseMapper<T>, T> extends ServiceImpl<M, T>
+{}

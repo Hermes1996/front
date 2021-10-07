@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>测试</title>
+</head>
+<body>
+<script type="text/javascript">
+    // 数组key value 转换成map对象
+    let arr = [{
+        id: 1,
+        goodNo: '1001'
+    },
+        {
+            id: 2,
+            goodNo: '1002'
+        },
+        {
+            id: 3,
+            goodNo: '1003'
+        },
+        {
+            id: 4,
+            goodNo: '1004'
+        },
+        {
+            id: 5,
+            goodNo: '1005'
+        }
+    ];
+    let obj = {};
+    arr.forEach(item => {
+        let key = item.id;
+        obj[key] = item.goodNo;
+    });
+    console.log('obj',obj);
+    let rObj = arr.reduce((pre, cur) => {
+            return {...pre, [cur.id]: cur.goodNo}
+        }, {}
+    );
+    console.log("rObj",rObj);
+
+    // 对象的key最终转化为字符串或者是Symbol，map的key可以是任何类型；
+    var objMap={},objKeyA=[123],objKeyB=123;
+    objMap[objKeyA]="objKeyA";//转化为字符123
+    objMap[objKeyB]="objKeyB";//覆盖
+    console.log('objMap', objMap);
+    console.log('objMap[objKeyA]', objMap[objKeyA]);
+
+    var mapMap=new Map(),mapKeyA=[123],mapKeyB=123;
+    mapMap.set(mapKeyA,"mapKeyA");
+    mapMap.set(mapKeyB,"mapKeyB");
+    console.log('mapMap', mapMap);
+    console.log('mapMap[mapKeyA]', mapMap.keys().next().value);
+    console.log('mapMap[mapKeyA]', [...mapMap.keys()][0]);
+
+</script>
+</body>
+</html>

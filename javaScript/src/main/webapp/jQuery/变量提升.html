@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>var变量声明提升到函数的top</title>
+</head>
+<body>
+<script type="text/javascript">
+    let l='Hello World';
+    (function(){
+        alert(l);
+    })();
+
+    (function(){
+        alert(v);
+    })();
+    var v='Hello World';
+    // var v;
+    // (function()
+    //     alert(v);
+    // })();
+    // v='Hello World';
+
+    var v = 'Hello World';
+    (function () {
+        alert(v);
+        var v = 'I love you';
+    })();
+    // var v = 'Hello World';
+    // (function () {
+    //     var v ; 局部变量比同名全局变量的优先级高，输出未定义
+    //     alert(v);
+    //     v= 'I love you';
+    // })()
+</script>
+</body>
+</html>

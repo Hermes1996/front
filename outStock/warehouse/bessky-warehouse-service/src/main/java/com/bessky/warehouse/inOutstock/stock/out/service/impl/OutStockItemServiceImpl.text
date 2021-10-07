@@ -1,0 +1,49 @@
+package com.bessky.warehouse.stock.out.service.impl;
+
+import com.bessky.common.jdbc.service.impl.MyServiceImpl;
+import com.bessky.warehouse.stock.out.entity.OutStockItem;
+import com.bessky.warehouse.stock.out.mapper.OutStockItemMapper;
+import com.bessky.warehouse.stock.out.service.OutStockItemService;
+import org.apache.dubbo.config.annotation.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
+
+import java.util.List;
+
+/**
+ * 出库明细表服务层实现
+ *
+ * @author dinggaunghui
+ * @date 2021/08/12
+ */
+@Service
+public class OutStockItemServiceImpl extends MyServiceImpl<OutStockItemMapper, OutStockItem> implements OutStockItemService
+{
+    @Override
+    public List<OutStockItem> getByOutId(Integer outId)
+    {
+        return this.list(OutStockItem::getOutId, outId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createOutStockItem(List<OutStockItem> outStockItems)
+    {
+        this.insert(outStockItems);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateOutStockItem(List<OutStockItem> outStockItems)
+    {
+        this.update(outStockItems);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteByOutId(Integer outId)
+    {
+        Assert.notNull(outId, "出库单号不能为空");
+        this.remove(OutStockItem::getOutId, outId);
+    }
+}

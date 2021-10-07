@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+</head>
+<body style="text-align:center;">
+<div id="test">这是一段包含一些
+    <codes>代码</codes>和
+    <italic>文本</italic>！
+    <input id="demo" value="输入你的选择">
+</div>
+
+<p></p>
+<button onClick="innerTextFn()">innerHTML</button>
+<button onClick="innerHTMLFn()">innerText</button>
+<button onClick="valueFn()">value</button>
+<p id="op"></p>
+<!--两者输出不一样，但替换文本结果一样-->
+<script>
+    function innerTextFn() {
+        var x = document.getElementById('test');
+        alert(x.innerText);
+        x.innerText="代码"
+    }
+
+    function innerHTMLFn() {
+        var x = document.getElementById('test');
+        alert(x.innerHTML);
+        x.innerText="代码"
+    }
+
+    function valueFn() {
+        var x = document.getElementById('demo');
+        alert(x.value);
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>reduce</title>
+</head>
+<body>
+数组还有两个归并方法：reduce()、reduceRight()
+reduce()方法从左到右遍历数组；而reduceRight()从右到左遍历数组；
+语法
+array.reduce(function(prev, currentValue, currentIndex, arr), initialValue);
+/*
+只能处理数组，相对于map可以进行复杂操作
+function可省
+function(...)有返回值，可以用箭头函数代替
+prev: 必需。初始值, 或者计算结束后的返回值(total)
+currentValue： 必需。当前处理元素。reduce函数循环第一次时，为array第一个元素,有初始值为第二个元素
+currentIndex： 可选。当前元素的索引
+arr： 可选。当前元素所属的数组对象
+initialValue: 可选。total的初始值，reduce函数循环次数+1；没有提供 initialValue，total取array第一个值,array空报错
+*/
+
+求和
+const arr = [12, 34, 23];
+const sum = arr.reduce((total, num) => total + num);
+
+设定初始值求和
+const arr = [12, 34, 23];
+const sum = arr.reduce((total, num) => total + num, 10);  // 以10为初始值求和
+
+对象数组求和
+var result = [
+{ subject: 'math', score: 88 },
+{ subject: 'chinese', score: 95 },
+{ subject: 'english', score: 80 }
+];
+const sum = result.reduce((total, cur) => total + cur.score, -10);  // 总分扣除10分
+
+最大值
+const arr = [12, 34, 23];
+const max = arr.reduce((total,num) => total>num ? total:num;});
+
+字符出现次数
+const str = 'sfhjasfjgfasjuwqrqadqeiqsajsdaiwqdaklldflas-cmxzmnha';
+const res = str.split('').reduce((prev, cur) => {prev[cur] ? prev[cur]++ : prev[cur] = 1; return prev;}, {});
+
+代替map
+const arr = [0, 1, 2, 3];
+const arrA = arr.map(cur => cur * 2);
+// 输出 [0, 2, 4, 6]
+const arrB = arr.reduce((pre, cur) => {pre.push(cur * 2); return pre;}, []);
+//push() 方法可向数组的末尾添加一个或多个元素
+const arrB = arr.reduce((pre, cur) => { return [...pre, cur * 2]}, []);
+//...数组序列化；上面的写法仅仅是items为必传参和返回值，需要处理
+
+数组转对象
+<!-- 按照id 取出stream -->
+var streams = [{name: '技术', id: 1}, {name: '设计', id: 2}];
+var obj = streams.reduce((pre, cur) => {pre[cur.id] = cur; return pre;}, {});
+
+数组转map
+let rObj = arr.reduce((pre, cur) => {
+return {...pre, [cur.id]: cur.goodNo}
+}, {}
+);
+foreach数组转map
+let obj = {};
+arr.forEach(item => {
+let key = item.id;
+obj[key] = item.goodNo;
+})
+// map对象set方法
+this.set = function(key, val) {
+items[key] = val;
+};
+
+map取对象key或value为数组
+const resArr1 = xxObj.map(obj =>obj.name);
+
+代替filter
+const arr = [0, 1, 2, 3];
+const A = arr.filter(cur => {
+return cur > 1
+});
+// 输出 [2, 3]
+const B = arr.reduce((pre, cur) => {
+return cur > 1 ? [...pre, cur] : t
+}, []);
+
+代替map和filter
+const arr = [0, 1, 2, 3];
+const C = arr.map(cur => {
+return cur * 2
+}).filter(cur => {
+return cur > 2
+});
+// 输出[4, 6]
+const D = arr.reduce((pre, cur) => {
+return cur * 2 > 2 ? [...pre, cur * 2] : pre
+}, []);
+
+扩展：map与filter区别
+var arr = [1,2,3,4];
+var my = arr.filter(function(cur,index,arr){
+return cur*2;
+});
+console.log(my);   //[1, 2, 3, 4]
+//用filter若进行聚合操作，每一项都为true
+</body>
+</html>

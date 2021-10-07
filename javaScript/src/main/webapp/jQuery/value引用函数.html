@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>value引用函数</title>
+</head>
+<body>
+<form action="http://www.baidu.com" method="get">
+    <div>
+        <select class="city-do" name="sel"  multiple>
+            <option value="f1">广州</option>
+            <option value="f2">深圳</option>
+            <option value="3">山东</option>
+        </select>
+    </div>
+    <input type="submit" value="提交">
+</form><br>
+
+<!--错误写法：<script/>-->
+<script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+<script>
+
+    $(function () {
+        $(".city-do").mousedown(function () {
+            var optionVal = this.value;
+            if (optionVal.indexOf("f") >= 0) {
+                // eval(string)可实现计算或拼接逻辑，并执行里面js
+                eval(optionVal + "()");
+            }
+        });
+    });
+
+    function f1() {
+        alert("广州")
+    }
+    function f2() {
+        alert("深圳")
+    }
+</script>
+</body>
+</html>

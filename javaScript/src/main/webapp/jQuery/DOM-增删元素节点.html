@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>js需要先创造节点</title>
+</head>
+<body>
+<p>这是一个段落。</p>
+<p>这是另外一个段落。</p>
+<ol>
+    <li>List item 1</li>
+    <li>List item 2</li>
+    <li>List item 3</li>
+</ol>
+<button id="demo1">点击添加文本</button>
+<button id="demo2">点击添加列表项</button>
+<button id="demo3">删除文本</button>
+</body>
+<script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+<script >
+$(function () {
+    $("#demo1").click(function () {
+        // 一定要加p标签，不然remove定位不到
+        $("p:eq(1)").append("<p>最新段落</p>")
+    });
+    $("#demo2").click(function () {
+        $("ol").append("<li>最新列表项</li>")
+    });
+    $("#demo3").click(function () {
+        $("p:last").remove()
+    })
+
+})
+</script>
+</html>

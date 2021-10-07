@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>js对象</title>
+</head>
+<body>
+<P id="demo"></P>
+</body>
+<script>
+    function Person(first, last, age, eye) {
+        this.firstName = first;
+        this.lastName = last;
+        this.age = age;
+        this.eyeColor = eye;
+        this.outputInfo  = function() {
+           return 'name = ' + this.firstName +  '<br\>' + 'lastName = ' + this.lastName + '<br\>' }
+    }
+        // prototype原型对象增加属性
+        Person.prototype.nationality = "French";
+        var person1 = new Person("Endy", "Edison", 18, "green");
+    document.getElementById("demo").innerHTML=person1.outputInfo()+person1.nationality
+
+
+</script>
+</html>

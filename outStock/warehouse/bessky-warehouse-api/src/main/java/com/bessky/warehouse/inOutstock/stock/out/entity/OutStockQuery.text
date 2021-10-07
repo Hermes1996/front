@@ -1,0 +1,67 @@
+package com.bessky.warehouse.stock.out.entity;
+
+import com.bessky.common.model.core.PageQuery;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+/**
+ * 出库单查询对象
+ *
+ * @author dinggaunghui
+ * @date 2021/08/12
+ */
+@Data
+public class OutStockQuery extends PageQuery
+{
+    /**
+     * 多个主键查询
+     */
+    private String multiId;
+
+    /**
+     * 仓库等于查询
+     */
+    private Integer warehouseId;
+
+    /**
+     * 仓库授权列表查询
+     */
+    private List<Integer> authWarehouseIds;
+
+    /**
+     * 出库类型等于查询
+     */
+    private Integer type;
+
+    /**
+     * 出库状态等于查询
+     */
+    private Integer state;
+
+    /**
+     * SKU等于查询
+     */
+    private String sku;
+
+    /**
+     * 出库备注模糊查询
+     */
+    private String likeRemark;
+
+    /**
+     * 创建人等于查询
+     */
+    private Integer createBy;
+
+    /**
+     * 创建时间范围查询开始
+     */
+    private LocalDateTime fromCreateTime;
+
+    /**
+     * 创建时间范围查询结束
+     */
+    private LocalDateTime toCreateTime;
+}

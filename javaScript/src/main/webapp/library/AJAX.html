@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>异步</title>
+</head>
+<body>
+<p id="demo"></p>
+<script>
+    //setTime为一个异步，这个子线程停留3秒，之后执行回调函数
+    setTimeout(function() {
+        document.getElementById("demo").innerHTML="function为回调函数，为结果处理"
+    },3000);
+
+    //ES6-Promise多次调用异步,最后一个逻辑可省new Promise
+    new Promise(function (resolve, reject) {
+        setTimeout(function () {
+            console.log("First");
+            resolve();
+        }, 1000);
+    }).then(function () {
+        return new Promise(function (resolve, reject) {
+            setTimeout(function () {
+                console.log("Second");
+                resolve();
+            }, 4000);
+        });
+    }).then(function () {
+        setTimeout(function () {
+            console.log("Third");
+        }, 3000);
+    });
+
+    //优化
+    function print(delay,message) {
+        return new Promise(function (resolve, reject) {
+            setTimeout(function () {
+                console.log(message);
+                resolve();
+            },delay)
+        })
+
+    }
+    // print(1000,"first").then(function () {
+    //     print(4000,"Second").then(function () {
+    //         print(3000,"Third")
+    //     })
+    // })
+    //
+    //二次优化,await需要搭配Promise
+    async function f() {
+        await print(1000,"First");
+        await print(4000,"Second");
+        await print(3000,"Third");
+    }
+    f();
+
+    // async抛异常
+    (async function f1() {
+        try {
+            await new Promise(function (resolve, reject) {
+                throw "errow..."
+            })
+        } catch (err) {
+            console.log(err)
+        }
+    })()
+    // 自调用(function)()
+</script>
+</body>
+</html>

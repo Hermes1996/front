@@ -1,0 +1,251 @@
+W3C DOM 标准被分为 3 个不同的部分：
+    核心 DOM - 针对任何结构化文档的标准模型
+    XML DOM - 针对 XML 文档的标准模型
+    HTML DOM - 针对 HTML 文档的标准模型
+编者注：DOM 是 Document Object Model（文档对象模型）的缩写。
+HTML DOM 定义了所有 HTML 元素的对象和属性，以及访问它们的方法。
+换言之，HTML DOM 是关于如何获取、修改、添加或删除 HTML 元素的标准。
+
+JSP全称Java Server Pages，是一种动态网页开发技术。它使用JSP标签在HTML网页中插入Java代码。标签通常以<%开头以%>结束。
+	jsp引擎将jsp文件转化为servlet：所有模板文本改用 println() 语句，并且将所有的 JSP 元素转化成 Java 代码（Java文件），然后转化为.class文件
+创建：	直接建造maven-archetype-webapp
+
+Jsp标签：
+1	<% %>叫做脚本片段，定义局部变量或者调用方法，但不能定义方法
+		里面System.out.println只会输出到tomcat-output控制台
+2	<%!%>称作声明，定义方法和属性以及全局变量
+
+3	<%=%>称作jsp表达式，用于将已经声明的变量或者表达式输出到网页上面
+		this全局
+
+4	<body></body>中的代码称作模板元素，网页显示
+
+5	<%@ page contentType="text/html;charset=UTF-8" language="java" %
+		jsp指令
+截取字符串  ${fn:substring(orderItem.relatedProduct.customsNameCn,0,10)}
+日期 <fmt:formatDate value="${now}" pattern="yyyy-MM-dd HH:mm:dd"/>
+
+
+JSP隐式(内置）对象是JSP容器为每个页面提供的Java对象，开发者可以直接使用它们而不用显式声明。JSP隐式对象也被称为预定义变量。
+对象 	            描述
+request 	HttpServletRequest 接口的实例  获取HTTP头信息，cookies，HTTP方法;需引入javax.servlet-api依赖
+response 	HttpServletResponse 接口的实例 添加新的cookies，时间戳，HTTP状态码
+out 	JspWriter类的实例，用于把结果输出至网页上
+session 	HttpSession类的实例，跟踪在各个客户端请求间的会话
+application 	ServletContext类的实例，与应用上下文有关
+config 	ServletConfig类的实例，访问Servlet或者JSP引擎的初始化参数，比如文件路径等
+pageContext 	PageContext类的实例，提供对JSP页面所有对象以及命名空间的访问，传给JSP页面的指令信息，包括缓存信息，ErrorPage URL,页面scope；提供方法removeAttribute()
+page 	类似于Java类中的this关键字
+Exception 	Exception类的对象，代表发生错误的JS
+JSTL:JSP标准标签库
+<c:set value="${app:j2cache('J2CACHE_LOGISTICS_CONF', 'yuntu')}" var="logistic"></c:set>
+#if-else  <c:if>...</c:if>不具备else功能
+<c:choose>
+    <c:when test="${not empty logistic[0].code}">
+        ${logistic[0].code}
+    </c:when>
+    <c:otherwise>
+        C89792
+    </c:otherwise>
+</c:choose>
+${(not empty logistic and fn:length(logistic) > 0 and not empty logistic[0].code) ? logistic[0].code : ' C89792'}
+等于和包含
+    数字用${num == 1 }
+    字符串用${str eq  "1"}
+    包含<c:if test="${fn:contains(StrMain,'string')}">
+      contains//需要实现的内容
+      </c:if>
+将字符串String转换为整数类型Int
+方法一：
+通过fmt标签把目标字符转换储存起来，如book.bLevel转换成整数后明命名为level，<fmt:parseNumbervar="level"value="{book.bLevel}" type=“number”/>
+方法二：直接乘1
+<c:forEach begin=“1” end="${book.bLevel*1}" var=“i”>
+
+表单提交禁止enter键提交  onkeydown="if(event.keyCode==13){return false;}"
+
+
+span行内元素： 不会换行 <span class="demonstration">滑块&nbsp</span>不会换行
+div 块级元素：会换行 <div class="demonstration">滑块&nbsp</div>会换行
+	常见的块级元素有：div、p、h1-h6、ol-li、table、header等等
+
+
+过滤器接口Filter包：javax.servlet.Filter
+
+html:静态页面
+jsp:%带servlet,支持Java代码
+js:前端函数/方法,类Java代码
+
+JavaScript 数据类型
+在 JavaScript 中有 6 种不同的基本数据类型：
+    string
+    number
+    boolean
+    object
+    function
+    symbol
+    注：型，表示独一无二的值Symbol 是 ES6 引入了一种新的原始数据类
+3 种对象类型：
+    Object
+    Date
+    Array
+2 个不包含任何值的数据类型：
+    null
+    undefined
+
+js文件命名规范：采用小写方式，以中划线或者.分隔，禁止驼峰式命名。比如：my-project-name;my.project.name
+jsp命名规范：首字母小写，驼峰式命名或下划线隔开，。如：product_list.jsp 或者productList.jsp
+
+HTML DOM Document 对象
+forms[] 	返回对文档中所有 Form 对象引用。
+all[] 	提供对文档中所有 HTML 元素的访问。
+images[] 	返回对文档中所有 Image 对象引用。
+links[] 	返回对文档中所有 Area 和 Link 对象引用。
+getElementById() 	返回对拥有指定 id 的第一个对象的引用。
+    innerHTML属性设置内容后, 会将内容中包括的标签解析. innerText不会.
+getElementsByName() 	返回带有指定名称的对象集合。
+write() 	向文档写 HTML 表达式 或 JavaScript 代码。
+writeln() 	等同于 write() 方法，不同的是在每个表达式之后写一个换行符。
+
+js ==和===
+==在判断相等时会进行隐式的类型转换
+0 == "0"  //true
+1 == true //true // Number Boolean
+[] == ""  //true // Object String
+null == undefined //true
+建议是只要变量的数据类型能够确定，一律使用===
+
+js || 和 &&
+逻辑与的优先级是高于逻辑或的
+undefined未赋值 为 false
+0是false
+c=a && b :  计算表达式a（也可以是函数）的运算结果，
+                哪个最先为 false，返回该的结果；都为true返回b
+
+c=a || b :   计算表达式a（也可以是函数）的运算结果，
+                哪个最先为 True，返回该的结果；都为false返回b
+
+js内置对象arguments
+x = f(1, 123, 500, 115, 44, 88);
+function f(){ var i = arguments[0];}
+相当于：
+var arr = (1, 123, 500, 115, 44, 88);
+x=f(arr);
+function f(arr) {   var i = arrs[0];}
+
+js CONTEXT_PATH指tomcatURL地址
+
+var xx= function () {}
+var申明函数,引用需要加括号，xx（）
+
+class和id选择器
+class可同为一个标签，id标签不可重复
+
+js  each遍历return跳不出方法，增加标记
+var res = ture
+.each({
+ if(){
+  res=false
+  return
+ }
+}
+if(!res){
+ return
+}
+
+
+div标签
+将标题、段落作为一个区域分块，设置样式（style或者选择器实现）
+常用于带颜色的方块文本框
+
+jQuery是一个轻量级的"写的少，做的多"的JavaScript库(封装），多用于事件和效果展示
+$("*[name='name']").val(); //获取vlaue值
+$("*[name='name']").attr('id','name'); //添加id名称
+$("*[name='name']").after('<div>hello world</div>'); //在当前外添加元素
+jQuery(document).ready(function() { 全局变量声明：  isEditableNew =false;
+    或window.isEditableNew; window.isEditableNew =false;
+
+1、发送的数据数量
+在 GET 中，只能发送有限数量的数据，因为数据是在 URL 中发送的。
+在 POST 中，可以发送大量的数据，因为数据是在正文主体中发送的。
+2、安全性
+GET 方法发送的数据不受保护，因为数据在 URL 栏中公开，这增加了漏洞和黑客攻击的风险。
+POST 方法发送的数据是安全的，因为数据未在 URL 栏中公开，还可以在其中使用多种编码技术，这使其具有弹性。
+3、加入书签中
+GET 查询的结果可以加入书签中，因为它以 URL 的形式存在；而 POST 查询的结果无法加入书签中。
+4、编码
+在表单中使用 GET 方法时，数据类型中只接受 ASCII 字符。
+在表单提交时，POST 方法不绑定表单数据类型，并允许二进制和 ASCII 字符。
+5、可变大小
+GET 方法中的可变大小约为 2000 个字符。
+POST 方法最多允许 8 Mb 的可变大小。
+6、缓存
+GET 方法的数据是可缓存的，而 POST 方法的数据是无法缓存的。
+7、主要作用
+GET 方法主要用于获取信息。而 POST 方法主要用于更新数据
+$(this) 	当前 HTML 元素
+$("p") 	所有 <p> 元素
+$("p.intro") 	所有 class="intro" 的 <p> 元素
+$(".intro") 	所有 class="intro" 的元素
+$("#intro") 	id="intro" 的元素
+$("ul li:first") 	每个 <ul> 的第一个 <li> 元素
+
+
+前端name,id,value,dictKey
+id为标识，不传递数据
+value：按钮为显示文本，如：删除，重置按钮，复选框为提交的值
+ [input type="file" value值为可读]
+name:复选框控件的名字，如跑步为running
+    下拉框和搜索框,name为提交的键，value为提交的值(声明value会覆盖placeholder,value是默认存在的，可省略)
+dictkey为下拉框页面中文数据
+name作为标识在input里面，外面拿不到值，id可以
+
+获取tbody元素 <tbody id="history_income_list">
+var trList = $("#history_income_list").children("tr")
+    for (var i=0;i<trList.length;i++) {
+        var tdArr = trList.eq(i).find("td");
+        var history_income_type = tdArr.eq(0).find('input').val();//收入类别
+    }
+模糊匹配id <tr id="tr-order-item-${orderItemStatus.index }">
+   var skuHistoryList = $("[id^='tr-order-item-']");
+            historySkuNames=new Array();
+            for (var i = 0; i < skuHistoryList.length; i++) {
+                var tdArr = skuHistoryList.eq(i).find("td");
+                var historySkuName = tdArr.eq(1).find('input').val();
+                historySkuNames[i]=historySkuName;
+            }
+数组之间的比较需要tostring()
+
+button的type 属性，IE的默认是 “button”，非IE默认是 “submit”(提交数据）
+
+css:	<div style="width: 12mm; height: 4mm; float: left; border-left: 1px solid;">文本</div>
+postion:static默认值，位置固定，可用float属性，不能用right，top，z-index属性，可以用margin-top属性
+fixed一般用于广告，随滚动条一直会出现；可用z-index(图层叠加的位置），right，top属性，margin-top属性
+relative 与fixed一样，只不过不是一直出现
+边框不显示底部border: 2px solid black;border-bottom:0
+边框里面文字与边框上部分距离line-height: 10mm
+边框里面文字位置text-align: center
+文字块位置float: left
+两个元素上下间隔margin-top: 2mm;
+div里面文字整体加粗font-weight: bold
+图片大小<img src="路径" height="50mm" width="65%">
+h1-h6默认大小
+h1=32px
+h2=24px
+h3=18.72px
+h4=16px
+p=16px
+h5=13.28px
+h6=12px
+打印预览边框线位置不对：加了margin，宽度不够;有margin应该把border放在第一个div下面
+
+vue
+hash模式和history模式，带＃的则是hash模式(默认）index.js里面加上  mode:'history',
+引用Vue.js后可以在 浏览器上直接使用Vue 的实例  .vue 只能通过编译后，才可在浏览器上运行查看效果
+格式：new Vue({键：值})
+页面数据、函数传递{{键}} 与input v-blind双向绑定 [v-blind：简写为：]
+监听事件<button v-on:click [简写为 @click]
+普通<script>里面语句“；”隔开，vue","隔开
+
+java
++= 是简写，a += 1就是a = a+1
+=+并不是简写，a =+ a直接对a的赋值

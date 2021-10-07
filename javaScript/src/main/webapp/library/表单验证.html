@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>验证</title>
+</head>
+<body>
+<!--判断表格内容是否为空-->
+<form name="myForm" action="https://www.baidu.com/" onsubmit="return validateForm()" method="post" >
+    名字:<input type="text" name="fname">
+    <input type="submit" value="百度">
+</form>
+<br>
+<!--自动验证内容是否为空,required默认“required”，可省-->
+<form action="https://www.baidu.com/" method="post">
+    名字:<input type="text" name="fname" required="required">
+    <input type="submit" value="百度">
+</form>
+<br>
+<!--验证API:required默认非空，写了type会验证对应类型-->
+数字：<input id="checkValidityId" type="number" min="1" max="5000" required>
+<button onclick="checkValidityId()" >验证</button>
+<p id="demo"></p>
+<form id="demoForm" method="get" action="https://www.baidu.com">
+    <legend>输入您的名字，邮箱，URL，备注</legend>
+    <!--    p换行且隔开一行-->
+    <p>
+        Name (必需, 最小两个字母)<input minlength="2" type="text" name="name" required>
+    </p>
+    <p>
+        E-Mail (必需)<input type="email" name="mail" required>
+    </p>
+    <p>
+        URL (可选)<input  type="url" name="url" >
+    </p>
+    备注 (必需)<input type="text" required><br>
+
+    <input type="submit">
+</form>
+</body>
+<script>
+    function validateForm(){
+        var x =document.forms["myForm"]["fname"].value;
+        if(x ==null || x ===""){
+            alert("请输入内容");
+            return false;
+        }
+    }
+    function checkValidityId(){
+        var elementById = document.getElementById("checkValidityId");
+        if(elementById.checkValidity()==false){
+            document.getElementById("demo").innerText=elementById.validationMessage;
+        }
+        // elementById.setCustomValidity("");//自定义
+        //
+        // if(elementById.checkValidity()==false){
+        //     if(elementById.value==""){
+        //         elementById.setCustomValidity("内容不能为空")
+        //     }else if(elementById.value<1 || elementById.value>5000){
+        //     elementById.setCustomValidity("请重新输入数值（1~5000之间）!")
+        //     }
+        //     document.getElementById("demo").innerText=elementById.validationMessage;
+        // }
+
+    }
+</script>
+</html>

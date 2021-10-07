@@ -1,0 +1,19 @@
+package com.bessky.warehouse;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+/**
+ * 控制层启动类
+ *
+ * @author liunancun
+ * @date 2020/2/24
+ */
+@SpringBootApplication
+public class BesskyWarehouseWebApplication
+{
+    public static void main(String[] args)
+    {
+        SpringApplication.run(BesskyWarehouseWebApplication.class, args);
+    }
+}

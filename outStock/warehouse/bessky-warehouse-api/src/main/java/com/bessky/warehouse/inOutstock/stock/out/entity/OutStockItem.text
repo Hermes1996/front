@@ -1,0 +1,88 @@
+package com.bessky.warehouse.inOutstock.stock.out.entity;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+import java.io.Serializable;
+
+/**
+ * 出库明细表实体类
+ *
+ * @author dinggaunghui
+ * @date 2021/08/12
+ */
+@Data
+@TableName("t_out_stock_item")
+public class OutStockItem implements Serializable
+{
+    /**
+     * 序列化标识
+     */
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 主键
+     */
+    @TableId(value = "item_id", type = IdType.AUTO)
+    private Integer id;
+
+    /**
+     * 出库单号
+     */
+    private Integer outId;
+
+    /**
+     * 产品编号
+     */
+    private Integer productId;
+
+    /**
+     * SKU
+     */
+    private String sku;
+
+    /**
+     * 价格
+     */
+    private Double price;
+
+    /**
+     * 数量
+     */
+    private Integer quantity;
+
+    /**
+     * 交易编号
+     */
+    private String transationId;
+
+    /**
+     * 卖家账号
+     */
+    @TableField(value = "seller_id")
+    private String account;
+
+    /**
+     * 所属平台
+     */
+    private Integer platform;
+
+    /**
+     * 订单明细编号
+     */
+    @TableField(value = "platform_item_id")
+    private String orderItemId;
+
+    /**
+     * 系统订单编号
+     */
+    private Integer systemOrderId;
+
+    /**
+     * 备注
+     */
+    private String remark;
+}

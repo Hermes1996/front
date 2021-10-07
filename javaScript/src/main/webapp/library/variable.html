@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>变量</title>
+</head>
+<body>
+<p id="demo"></p>
+<!--demo要写到script方法前-->
+<script>
+    // 八进制和十六进制
+    var oct=0o377;
+    var hex=0xFF;
+    console.log("默认十进制"+oct.toString()+"  八进制：辗转相除八"+oct.toString(8));
+
+    var x = 5e2;
+    var y = 10e-2;
+    console.log("x+y:" + (x + y));
+
+    document.write("js支持字符串，数组，集合[对象]..");
+    var b = true;
+    var cars = new Array();
+    cars[0] = "Sala";
+    var person = {firstName: "Dear", lastName: "John"};
+
+    var string = "abc";
+    var char = string[0];
+    console.log(char);
+
+    var undefined;
+    var varNull = null;
+    console.log(typeof undefined + "," + typeof varNull + "," + typeof cars);
+    console.log("Date和Array对象类型必须用constructor属性" + cars.constructor);
+
+    let id1 = Symbol("id");
+    let id2 = Symbol("id");
+    console.log("唯一性:" + (id1 == id2));
+    let obj = {[id1]: "无法被遍历", lastName: "json"};
+    for (let objValue in obj) {
+        console.log(obj[objValue]);
+    }
+
+    // 有局部变量先执行
+    var var1 = "全局变量";
+    f();
+
+    function f() {
+        var var1 = "局部变量";
+        console.log(var1)
+    }
+
+    var var2 = "全局变量";
+    f2();
+
+    function f2() {
+        console.log(var2)
+    }
+
+    console.log("字符串转化为数字：" + Number("3.14") + Number("不是个数字"));
+    console.log("字符串转化为整数：" + Number.isInteger("3.14") + Number.parseInt("3.14"));
+
+    // json
+    var jsonText = '{ "sites" : [' +
+        '{ "name":"Google" , "url":"www.google.com" },{ "name":"Taobao" , "url":"www.taobao.com" } ]}';
+    objJson = JSON.parse(jsonText);
+    document.getElementById("demo").innerHTML = objJson.sites[1].name + " " + objJson.sites[1].url;
+
+    //内置对象arguments
+    function findMax() {
+        var i, max = arguments[0];
+        if (arguments.length < 2) return amx;
+        for (i = 0; i < arguments.length; i++) {
+            if (arguments[i] > max) max = arguments[i];
+        }
+        return max;
+    }
+
+    var max = findMax(1, 22, 33, 444);
+    console.log(max);
+
+
+</script>
+<!--void无返回值，运行括号代码-->
+<a href="javascript:void(alert('Warning!!!'))">点我!</a>
+</body>
+</html>

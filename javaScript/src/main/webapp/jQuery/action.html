@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>引用百度CDN</title>
+    <style type="text/css">
+ /*css里面id#开头;class.开头*/
+    #panel,#flip
+    {
+        /*内边距长=height+2*padding */
+        padding:25px;
+        height:25px;
+        width:500px;
+        text-align:center;
+        background-color:burlywood;
+        border:solid 1px #c3c3c3;
+    }
+    #panel
+    {
+        height:50px;
+        display: none;
+    }
+    .pColor
+     {
+         color:pink;
+     }
+    </style>
+</head>
+<body>
+<h1 class="test">这是一个大标题</h1>
+<h1 class="test">这是一个大标题</h1>
+<h2 id="demo">这是一个标题a</h2>
+<p>这是一个段落a</p>
+<p>这是另一个段落b</p>
+<button>双点我隐藏</button><br>
+<button>单击我显示</button><br>
+<button>单击我隐藏/显示</button><br>
+名字：<input type="text"><br>
+职业：<input type="text"><br>
+<button>点击淡入 div 元素</button><br>
+<div id="div1" style="width:80px;height:80px;display: none;background-color: aquamarine"></div><br>
+<div id="div2" style="width:80px;height:80px;display: none;background-color: darkred"></div><br>
+<div id="div3" style="width:80px;height:80px;display: none;background-color: yellowgreen"></div><br>
+<div id="flip">点我，显示或隐藏面板。</div>
+<div id="panel">Hello world!</div><br>
+<button>点击动画</button><br>
+<button>所有段落加上class设置颜色</button>
+<!--position绝对定位-->
+<div id="div4" style="color:yellow;font-size:16px;background:#98bf21;height:100px;width:100px;position:absolute">小</div>
+</body>
+<script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+<script>
+    // 语法$(元素选择).action()
+    // $(document).ready(function()为入口函数，可简写$(function(),与onload区别：可以执行多次不覆盖
+    $(document).ready(function(){
+        $("button:first").dblclick(function () {
+            $("p:first").hide();
+            // $("p:even").hide();选取偶数，初始为0
+            $("#demo").hide();
+            $(".test").hide("slow",function () {
+                // 回显
+                alert("所有段落、标题被隐藏完了")
+            });
+        });
+        // 按索引过滤标签元素
+        $("button:eq(1)").click(function () {
+            $("p:first").show();
+            $("#demo").show();
+            $(".test").show();
+        });
+        //toggle整合隐藏和显示
+        $("button:eq(2)").click(function () {
+            $("p:first").toggle();
+            $("#demo").toggle();
+            $(".test").toggle();
+        })
+    });
+
+    $(function(){
+        $("p:contains(a)").mouseenter(function () {
+            alert("鼠标移到了关键字a")
+   // mouseenter和mousedown增加回显后者会覆盖
+        // },function () {
+        //     alert("你已经离开")
+        })
+    });
+    $(function () {
+        $("#demo").mousedown(function () {
+            alert("鼠标点到了标题a")
+        })
+    });
+    $(function(){
+        $("p:contains(b)").hover(function () {
+            alert("鼠标停留到关键字b")
+        },function(){
+            alert("你已经离开")
+        })
+    });
+    // focus定位元素，blur失去焦点
+    $(function(){
+        $("input").focus(function(){
+            $(this).css("background-color","#cccccc")
+        });
+        $("input").blur(function () {
+            $(this).css("background-color","#ffffff")
+        })
+    });
+    //div淡入展示;fadeToggle淡入淡出
+    // slideDown向下滑动；slideToggle上下滑动
+    $(function () {
+        // $("button:eq(3)").click(function () {
+        //     $("#div1").fadeIn();
+        //     $("#div2").fadeIn("slow");
+        //     $("#div3").fadeIn(3000);
+        // });
+        $("button:eq(3)").click(function () {
+            $("#div1").fadeToggle();
+            $("#div2").fadeToggle("slow");
+            $("#div3").fadeToggle(3000);
+        });
+        $("#flip").click(function () {
+            $("#panel").slideToggle("slow")
+        });
+        $("button:eq(4)").click(function(){
+            // animate动画
+            // jQuery链式编程
+            $("#div4").animate({left:"250px",height:"200px"}).css({"color":"red","font-size":"60px"}).text("大");
+        })
+    });
+    $(function () {
+        $("button:eq(5)").click(function () {
+            // h1存在多个class；class="test pColor"
+            $("p,h1").addClass("pColor")
+        })
+    })
+</script>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AJAX</title>
+</head>
+<body>
+<p>这是一段文本</p>
+<button>AJAX获取外部内容</button>
+<button>AJAXget外部内容</button>
+<button>AJAXpost外部内容</button>
+<form  >
+    <tr>
+        <td>name:<input type="text" name="name" id="name" namerequired></td>
+        <td>url:<input type="url" name="url" id="url" required></td>
+    </tr>
+    <input type="submit" id="submitDemo">
+</form>
+<!--AJAX:不重载整个网页的情况下，AJAX 通过后台加载数据，并在网页上进行显示-->
+</body>
+<script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+<script>
+    $(function () {
+        // $("button").click(function () {
+        //     $("p").load("../demo.txt")
+        // })
+        // 默认三个回调参数:responseTxt成功的文本内容；xhr包含 XMLHttpRequest 对象
+        $("button:first").click(function () {
+            $("p").load("../demo.txt",function (responseTxt,statusTxt,xhr) {
+                if(statusTxt=="success"){
+                    alert("成功加载")
+                }else{
+                    alert("Error"+xhr.status+":"+xhr.statusText)
+                }
+            })
+        })
+    });
+    // $.get() 方法通过 HTTP GET 请求从服务器上请求数据。
+    $(function () {
+        $("button:eq(1)").click(function () {
+            $.get("../demo.txt",function (date,status) {
+                alert("状态："+status+"\n内容: "+date)
+            })
+        })
+    });
+    // $.post() 方法通过 HTTP POST 请求向服务器提交数据。
+    $(function () {
+        $("button:eq(2)").click(function () {
+            $.post("../demo.php", {
+               "name":"大熊",
+                "url":"www.baidu.com"
+            },function (date,status) {
+                alert("状态："+status+"\n内容: "+date)
+            })
+        })
+    });
+     //post2
+    $(function(){
+        $("#submitDemo").click(function () {
+            var name = document.getElementById("name").value;
+            var url = document.getElementById("url").value;
+            console.log(name);
+            console.log(url);
+            $.ajax({
+                url: "${CONTEXT_PATH}../demo.php",
+                type: 'post',
+                dataType: 'text',
+                "name": name ,
+                "url": url ,
+                error: function (name,url) {
+                 console.log("失败"),
+                alert("状态："+name+"\n内容: "+url)},
+                success: function (name,url) {
+                 console.log("成功"),
+                alert("状态："+name+"\n内容: "+url)},
+            })
+        })
+    })
+
+</script>
+</html>

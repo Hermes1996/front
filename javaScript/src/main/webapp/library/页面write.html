@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>页面输出</title>
+</head>
+<body>
+<p>document.write作为点击事件第二次会覆盖页面</p>
+<button onclick="writeFunction()">点击</button>
+<script>
+    // window一进入页面加载
+window.alert("弹窗数据");
+document.write("页面显示时间：" + Date());
+
+function writeFunction() {
+    document.write("覆盖页面显示时间：" + dateFormat("YYYY-mm-dd HH:MM", new Date()))
+}
+
+console.log("控制台输出")
+</script>
+<script src="../js/date.format.js"></script>
+</body>
+</html>

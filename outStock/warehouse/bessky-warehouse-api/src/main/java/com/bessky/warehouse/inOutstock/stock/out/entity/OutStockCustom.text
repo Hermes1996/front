@@ -1,0 +1,27 @@
+package com.bessky.warehouse.stock.out.entity;
+
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.util.List;
+
+/**
+ * 出库表定制类
+ *
+ * @author dinggaunghui
+ * @date 2021/08/12
+ */
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class OutStockCustom extends OutStock
+{
+    /**
+     * 序列化标识
+     */
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * 出库明细列表
+     */
+    private List<OutStockItem> outStockItems;
+}

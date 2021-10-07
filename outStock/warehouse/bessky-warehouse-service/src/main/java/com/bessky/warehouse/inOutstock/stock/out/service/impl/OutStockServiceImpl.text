@@ -1,0 +1,114 @@
+package com.bessky.warehouse.stock.out.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.bessky.common.jdbc.service.impl.MyServiceImpl;
+import com.bessky.common.model.core.PageDTO;
+import com.bessky.warehouse.stock.out.entity.OutStock;
+import com.bessky.warehouse.stock.out.entity.OutStockCustom;
+import com.bessky.warehouse.stock.out.entity.OutStockItem;
+import com.bessky.warehouse.stock.out.entity.OutStockQuery;
+import com.bessky.warehouse.stock.out.mapper.OutStockMapper;
+import com.bessky.warehouse.stock.out.service.OutStockItemService;
+import com.bessky.warehouse.stock.out.service.OutStockService;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.dubbo.config.annotation.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import javax.annotation.Resource;
+import java.util.List;
+
+/**
+ * 出库表服务层实现
+ *
+ * @author dinggaunghui
+ * @date 2021/08/12
+ */
+@Service
+public class OutStockServiceImpl extends MyServiceImpl<OutStockMapper, OutStock> implements OutStockService
+{
+    @Resource
+    private OutStockItemService outStockItemService;
+
+    @Override
+    public PageDTO<OutStock> getOutStockPageList(OutStockQuery query)
+    {
+        return this.page(query, this::setQueryWrapper);
+    }
+
+    @Override
+    public OutStock getOutStock(Integer id)
+    {
+        return this.get(id);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Integer createOutStock(OutStockCustom outStock)
+    {
+        this.insert(outStock);
+
+        List<OutStockItem> outStockItems = outStock.getOutStockItems();
+        outStockItems.stream().forEach(outStockItem -> outStockItem.setOutId(outStock.getId()));
+        outStockItemService.createOutStockItem(outStockItems);
+
+        return outStock.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateOutStock(OutStockCustom outStock)
+    {
+        this.update(outStock);
+
+        List<OutStockItem> outStockItems = outStock.getOutStockItems();
+
+        outStockItemService.updateOutStockItem(outStockItems);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteOutStock(Integer id)
+    {
+        this.remove(id);
+
+        outStockItemService.deleteByOutId(id);
+    }
+
+    /**
+     * 设置查询条件
+     *
+     * @param query
+     * @return
+     */
+    private LambdaQueryWrapper<OutStock> setQueryWrapper(OutStockQuery query)
+    {
+        LambdaQueryWrapper<OutStock> queryWrapper = Wrappers.lambdaQuery();
+
+        // 默认根据主键逆序
+        queryWrapper.orderByDesc(OutStock::getId);
+
+        if (query == null)
+        {
+            return queryWrapper;
+        }
+
+        this.eq(queryWrapper, OutStock::getWarehouseId, query.getWarehouseId());
+        this.eq(queryWrapper, OutStock::getType, query.getType());
+        this.eq(queryWrapper, OutStock::getState, query.getState());
+        this.eq(queryWrapper, OutStock::getCreateBy, query.getCreateBy());
+
+        this.like(queryWrapper, OutStock::getRemark, query.getLikeRemark());
+
+        this.in(queryWrapper, OutStock::getWarehouseId, query.getAuthWarehouseIds());
+        this.inInteger(queryWrapper, OutStock::getId, query.getMultiId());
+
+        this.range(queryWrapper, OutStock::getCreateTime, query.getFromCreateTime(), query.getToCreateTime());
+
+        // 关联SKU查询
+        String SKU_SQL = "SELECT inner_item.out_id FROM t_out_stock_item inner_item WHERE inner_item.sku = '" + query.getSku() + "'";
+        queryWrapper.inSql(StringUtils.isNotEmpty(query.getSku()), OutStock::getId, SKU_SQL);
+
+        return queryWrapper;
+    }
+}

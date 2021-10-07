@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="utf-8">
+    <title>三者区别</title>
+    <script>
+        function displayResult(){
+            var x=document.getElementById("bike").value;
+            alert(x);
+        }
+    </script>
+</head>
+<body>
+<p/>
+<form>
+    <input type="checkbox" id="bike" value="Bike"> 我有一辆自行车
+</form><br>
+<button type="button" onclick="displayResult()">显示value值</button><br><br>
+
+<form action="http://www.baidu.com" method="get">
+    <div>
+        <!-- 下拉框,name为提交的键，value为提交的值 -->
+        <!-- size大于1滚动框；multiple多选-->
+        <select name="sel" size="3" multiple>
+            <option value="1">广州</option>
+            <option value="2">深圳</option>
+            <option value="3">山东</option>
+            <option id="demo" >北京</option>
+        </select>
+    </div>
+    <input type="submit" value="提交">
+</form><br>
+
+<form class="search" action="https://www.baidu.com" method="get">
+    <input type="text" placeholder="请输入..." name="name" id="xx" />
+    <button><i>搜索</i></button>
+</form>
+
+<script>
+    window.onload=function () {
+        // id为标识
+        document.getElementById("demo").value="4"
+    }
+</script>
+</body>
+</html>

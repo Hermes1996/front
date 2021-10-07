@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>obj</title>
+</head>
+<body>
+<script type="text/javascript">
+    // Object.assign() 方法用于将对象值从复制到目标对象
+    // 当对象中只有一级属性，没有二级属性的时候，此方法为深拷贝，但是对象中有对象的时候，此方法，在二级属性以后就是浅拷贝。
+    const log = console.log;
+    let obj1 = { a: 0 , b: { c: 0}};
+    let obj2 = Object.assign({}, obj1);
+    log(obj2);
+    log(JSON.stringify(obj2));//对象转字符串
+    obj1.a = 1;
+    log(JSON.stringify(obj1));
+    // { a: 1, b: { c: 0}}
+    log(JSON.stringify(obj2));
+    // 深拷贝 { a: 0, b: { c: 0}}
+
+    obj1.b.c = 3;
+    log(JSON.stringify(obj1));
+    // { a: 1, b: { c: 3}}
+    log(JSON.stringify(obj2));
+    // 浅拷贝 { a: 2, b: { c: 3}}
+
+    // Deep Clone
+    obj1 = { a: 0 , b: { c: 0}};
+    let obj3 = JSON.parse(JSON.stringify(obj1));//parse字符串转对象
+    obj1.a = 4;
+    obj1.b.c = 4;
+    log(JSON.stringify(obj3));
+    // { a: 0, b: { c: 0}}
+
+</script>
+</body>
+</html>

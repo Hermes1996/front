@@ -1,0 +1,400 @@
+package com.bessky.warehouse.stock.out.controller;
+
+import cn.hutool.core.util.ArrayUtil;
+import com.bessky.common.core.util.BeanUtils;
+import com.bessky.common.core.util.CommonUtils;
+import com.bessky.common.core.util.ContextUtils;
+import com.bessky.common.model.constant.PermissionCode;
+import com.bessky.common.model.core.KeyValue;
+import com.bessky.common.model.core.PageDTO;
+import com.bessky.common.model.type.user.UserGradeEnum;
+import com.bessky.common.web.json.Response;
+import com.bessky.common.web.util.EasyExcelUtils;
+import com.bessky.common.web.util.ImportVerifyUtils;
+import com.bessky.product.core.entity.Product;
+import com.bessky.product.core.service.ProductService;
+import com.bessky.product.stock.entity.Stock;
+import com.bessky.product.stock.service.StockService;
+import com.bessky.product.supplier.entity.ProductSupplier;
+import com.bessky.product.supplier.entity.ProductSupplierCustom;
+import com.bessky.product.supplier.service.ProductSupplierService;
+import com.bessky.tool.queue.kafka.service.KafkaService;
+import com.bessky.user.core.entity.User;
+import com.bessky.user.core.entity.UserCustom;
+import com.bessky.user.core.service.UserService;
+import com.bessky.user.system.param.service.SystemParamService;
+import com.bessky.warehouse.core.entity.Warehouse;
+import com.bessky.warehouse.core.service.WarehouseService;
+import com.bessky.warehouse.stock.out.entity.OutStock;
+import com.bessky.warehouse.stock.out.entity.OutStockCustom;
+import com.bessky.warehouse.stock.out.entity.OutStockItem;
+import com.bessky.warehouse.stock.out.entity.OutStockQuery;
+import com.bessky.warehouse.stock.out.excel.OutStockExcelModel;
+import com.bessky.warehouse.stock.out.service.OutStockItemService;
+import com.bessky.warehouse.stock.out.service.OutStockService;
+import com.bessky.warehouse.stock.out.type.OutStockStateEnum;
+import com.bessky.warehouse.stock.out.type.OutStockTypeEnum;
+import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.dubbo.config.annotation.Reference;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.Assert;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * 出库表控制层
+ *
+ * @author dingguanghui
+ * @date 2021/08/12
+ */
+@RestController
+@RequestMapping("out/stocks")
+public class OutStockController
+{
+    @Reference
+    private OutStockService outStockService;
+
+    @Reference
+    private OutStockItemService outStockItemService;
+
+    @Reference
+    private SystemParamService systemParamService;
+
+    @Reference
+    private UserService userService;
+
+    @Reference
+    private WarehouseService warehouseService;
+
+    @Reference
+    private ProductService productService;
+
+    @Reference
+    private ProductSupplierService productSupplierService;
+
+    @Reference
+    private StockService stockService;
+
+    @Reference
+    private KafkaService kafkaService;
+
+    @PostMapping("list/page")
+    public Response<PageDTO<OutStock>> getOutStockPageList(@RequestBody OutStockQuery query)
+    {
+        // 设置查询权限
+        this.setQueryAuth(query);
+
+        // 获取出库列表
+        PageDTO<OutStock> page = outStockService.getOutStockPageList(query);
+
+        // 获取出库人映射
+        List<Integer> departmentIds = systemParamService.getIntegerList("GROUP_DEFAULT_DEPARTMENT.WAREHOUSE");
+        UserCustom userQuery = new UserCustom();
+        userQuery.setDepartmentIds(departmentIds);
+        Map<Integer, String> userMap = userService.getUserList(userQuery).stream()
+                .collect(Collectors.toMap(User::getUserId, User::getName));
+
+        // 获取仓库映射
+        List<Warehouse> warehouses = warehouseService.getWarehouseListFromCache();
+        if (!systemParamService.isAdmin())
+        {
+            List<Integer> warehouseIds = userService.getUserRoleDataPermissionIntegerList(PermissionCode.WAREHOUSE_VIEW);
+            warehouses.removeIf(item -> !warehouseIds.contains(item.getWarehouseId()));
+        }
+        Map<Integer, String> warehouseMap = warehouses.stream()
+                .collect(Collectors.toMap(Warehouse::getWarehouseId, Warehouse::getWarehouseName));
+
+        // 获取出库类型映射
+        Map<String, String> typeMap = Arrays.stream(OutStockTypeEnum.values())
+                .collect(Collectors.toMap(OutStockTypeEnum::code, OutStockTypeEnum::display));
+
+        // 获取出库状态映射
+        Map<String, String> stateMap = Arrays.stream(OutStockStateEnum.values())
+                .collect(Collectors.toMap(OutStockStateEnum::code, OutStockStateEnum::display));
+
+        return Response.ok(page).put("userMap", userMap).put("warehouseMap", warehouseMap).put("typeMap", typeMap)
+                .put("stateMap", stateMap);
+    }
+
+    @GetMapping("{id}")
+    public Response<OutStockCustom> getOutStock(@PathVariable("id") Integer id)
+    {
+        // 获取出库对象
+        OutStock outStock = outStockService.getOutStock(id);
+
+        Assert.notNull(outStock,"出库单不存在");
+
+        OutStockCustom cloneOutStock = BeanUtils.clone(outStock, OutStockCustom.class);
+
+        List<OutStockItem> outStockItems = outStockItemService.getByOutId(id);
+        cloneOutStock.setOutStockItems(outStockItems);
+
+        return Response.ok(cloneOutStock);
+    }
+
+    @PostMapping("create")
+//    @PreAuthorize("hasAuthority('5407010200')")
+    public Response<?> createOutStock(@RequestBody OutStockCustom outStock)
+    {
+        // 出库单验证
+        outStock.getOutStockItems().forEach(outStockItem -> this.verifyOutStock(outStockItem, outStock.getWarehouseId(), outStock.getType()));
+
+        Integer id = outStockService.createOutStock(outStock);
+
+        kafkaService.log(id, "OUT_STOCK", "创建出库单");
+
+        return Response.ok();
+    }
+
+    @PostMapping("update")
+//    @PreAuthorize("hasAuthority('5407010300')")
+    public Response<?> updateOutStock(@RequestBody OutStockCustom outStock)
+    {
+        // 出库单验证
+        outStock.getOutStockItems().forEach(outStockItem -> this.verifyOutStock(outStockItem, outStock.getWarehouseId(), outStock.getType()));
+
+        outStockService.updateOutStock(outStock);
+
+        kafkaService.log(outStock.getId(), "OUT_STOCK", "修改出库单");
+
+        return Response.ok();
+    }
+
+    @PostMapping("delete")
+//    @PreAuthorize("hasAuthority('5407010400')")
+    public Response<?> deleteOutStock(@RequestParam("id") Integer id)
+    {
+        // 删除出库单
+        outStockService.deleteOutStock(id);
+
+        kafkaService.log(id, "OUT_STOCK", "删除出库单");
+
+        return Response.ok();
+    }
+
+    @PostMapping("import")
+//    @PreAuthorize("hasAuthority('5407011100')")
+    public Response<?> importOutStock(OutStockCustom outStock, @RequestParam("file") MultipartFile file)
+    {
+        // 读取表格并处理数据
+        List<OutStockExcelModel> outStockExcelModels = EasyExcelUtils.importExcel(file, OutStockExcelModel.class);
+        this.toOutStockImport(outStock, outStockExcelModels);
+        Integer id = outStockService.createOutStock(outStock);
+
+        kafkaService.log(id, "OUT_STOCK", "导入出库单");
+
+        return Response.ok();
+    }
+
+    @GetMapping("type/list")
+    public Response<List<KeyValue<Integer, String>>> getOutStockTypeList()
+    {
+        List<KeyValue<Integer, String>> list = Arrays.stream(OutStockTypeEnum.values())
+                .map(type -> new KeyValue<>(type.intCode(), type.display())).collect(Collectors.toList());
+        return Response.ok(list);
+    }
+
+    @GetMapping("state/list")
+    public Response<List<KeyValue<Integer, String>>> getOutStockStateList()
+    {
+        List<KeyValue<Integer, String>> list = Arrays.stream(OutStockStateEnum.values())
+                .map(type -> new KeyValue<>(type.intCode(), type.display())).collect(Collectors.toList());
+        return Response.ok(list);
+    }
+
+    /**
+     * 设置查询权限
+     *
+     * @param query
+     */
+    private void setQueryAuth(OutStockQuery query)
+    {
+        // 判断是超级管理员直接返回
+        if (systemParamService.isAdmin())
+        {
+            return;
+        }
+
+        // 限制仓库用户
+        List<Integer> warehouseIds = userService.getUserRoleDataPermissionIntegerList(PermissionCode.WAREHOUSE_VIEW);
+        if (CollectionUtils.isEmpty(warehouseIds))
+        {
+            warehouseIds.add(-1);
+        }
+        query.setAuthWarehouseIds(warehouseIds);
+    }
+
+    /**
+     * 表格数据导入处理
+     *
+     * @param outStock
+     * @param outStockExcelModels
+     */
+    private void toOutStockImport(OutStockCustom outStock, List<OutStockExcelModel> outStockExcelModels)
+    {
+        if (CollectionUtils.isEmpty(outStockExcelModels))
+        {
+            return;
+        }
+
+        List<OutStockItem> outStockItems = new ArrayList<>();
+        for (int i = 0; i < outStockExcelModels.size(); i++)
+        {
+            OutStockExcelModel outStockExcelModel = outStockExcelModels.get(i);
+            OutStockItem outStockItem = new OutStockItem();
+
+            String sku = outStockExcelModel.getSku();
+            ImportVerifyUtils.verify(sku, i, "SKU");
+            outStockItem.setSku(sku);
+
+            String quantityText = outStockExcelModel.getQuantity();
+            ImportVerifyUtils.verify(quantityText, i, "数量");
+            Integer quantity = ImportVerifyUtils.verifyInteger(quantityText, i, "数量");
+            outStockItem.setQuantity(quantity);
+
+            String remark = outStockExcelModel.getRemark();
+            ImportVerifyUtils.verify(remark, i, "备注");
+            outStockItem.setRemark(remark);
+
+            // 出库单验证
+            this.verifyOutStock(outStockItem, outStock.getWarehouseId(), outStock.getType(), i);
+
+            outStockItems.add(outStockItem);
+        }
+
+        outStock.setOutStockItems(outStockItems);
+    }
+
+    /**
+     * 出库单验证
+     *
+     * @param outStockItem
+     * @param warehouseId
+     * @param type
+     * @param row
+     */
+    private void verifyOutStock(OutStockItem outStockItem, Integer warehouseId, Integer type, Integer... row)
+    {
+        // 获取SKU数量和价格上限
+        Map<String, Integer> skuMaximumMap = this.getSkuMaximumMap();
+        Integer maxSkuQuality = skuMaximumMap.get("maxSkuQuality");
+        Integer maxSkuPrice = skuMaximumMap.get("maxSkuPrice");
+
+        // 表格导入显示行数
+        String text = ArrayUtil.isEmpty(row) ? "" : "第" + (row[0] + 2) + "行的";
+
+        // SKU是否存在
+        String sku = outStockItem.getSku();
+        Product product = productService.getByProductSku(sku);
+        Assert.notNull(product, StringUtils.join(text, "SKU", sku, "不存在"));
+
+        // SKU所属仓库一致性
+        Assert.isTrue(product.getWarehouseId().equals(warehouseId), StringUtils.join(text, "SKU", sku, "所属仓库与所选仓库不一致"));
+
+        // 库存数量限制
+        Integer quantity = outStockItem.getQuantity();
+        Stock stock = stockService.getStockList(Arrays.asList(sku)).stream().findFirst().orElse(null);
+        if (stock != null)
+        {
+            Integer stockQuantity = stock.getStock();
+            Assert.isTrue(quantity <= stockQuantity, StringUtils.join(text, "SKU", sku, "数量超过库存数量"));
+        }
+
+        // 包材出库且中泰仓库不限制最大数量
+        int transferOverseaWarehouse = systemParamService.getInteger("DEFAULT_SECOND_TRANSFER_OVERSEA_WAREHOUSE");
+        if (OutStockTypeEnum.PACKAGE.intCode() != type && transferOverseaWarehouse != warehouseId)
+        {
+            Assert.isTrue(quantity <= maxSkuQuality, StringUtils.join(text, "SKU", sku, "数量超过可设置最大数量"));
+        }
+
+        // 销售出库不限制最大价格
+        ProductSupplierCustom productSupplier = new ProductSupplierCustom();
+        productSupplier.setProductIds(Arrays.asList(product.getProductId()));
+        List<ProductSupplier> productSuppliers = productSupplierService.getProductSupplierList(productSupplier);
+
+        if (CollectionUtils.isNotEmpty(productSuppliers))
+        {
+            Double discount = product.getDiscount();
+            discount = (discount == null || discount <= 0.0) ? 1.0 : discount;
+            productSuppliers.forEach(supplier -> {
+                if (supplier.getPriority() == null)
+                {
+                    supplier.setPriority(Integer.MIN_VALUE);
+                }
+            });
+            Double suppliePrice = productSuppliers.stream().max(Comparator.comparing(ProductSupplier::getPriority)).get().getSkuPrice() * discount;
+
+            if (OutStockTypeEnum.SALES.intCode() != type)
+            {
+                Assert.isTrue(suppliePrice <= maxSkuPrice, StringUtils.join(text, "SKU", sku, "价格超过可设置最大价格"));
+            }
+
+            // 设置SKU价格
+            outStockItem.setPrice(suppliePrice);
+        }
+
+        // 重发订单出库
+        List<String> remarks = CommonUtils.splitStringList(outStockItem.getRemark());
+        if (OutStockTypeEnum.ORDER_RETRANSMISSION.intCode() == type)
+        {
+            boolean isAllNineChar = remarks.stream().allMatch(remark -> remark.trim().length() == 9);
+            Assert.isTrue(isAllNineChar, StringUtils.join("重发订单出库,", text, "SKU", sku, "必须备注九位系统订单号（存在多个订单,允许用逗号分隔）"));
+        }
+
+        // SKU调拨出库
+        if (OutStockTypeEnum.ORDER_ALLOCATION.intCode() == type)
+        {
+            boolean isAllEightChar = remarks.stream().allMatch(remark -> remark.trim().length() == 8);
+            Assert.isTrue(isAllEightChar, StringUtils.join("SKU调拨出库,", text, "SKU", sku, "必须备注八位入库单流水号（存在多个流水号,允许用逗号分隔）"));
+        }
+    }
+
+    /**
+     * 获取SKU数量和价格上限
+     *
+     * @return
+     */
+    private Map<String, Integer> getSkuMaximumMap()
+    {
+        Map<String, Integer> skuMaximumMap = new HashMap<>();
+
+        // 判断用户是否存在
+        Integer userId = ContextUtils.getUserId();
+        User user = userService.getUserFromCache(userId);
+        Assert.notNull(user, "用户不存在");
+
+        Integer grade = user.getGrade();
+        Integer maxSkuQuality = Integer.MAX_VALUE;
+        Integer maxSkuPrice = Integer.MAX_VALUE;
+
+        if (!systemParamService.isAdmin() && grade != null)
+        {
+            if (UserGradeEnum.STAFF.intCode() == grade || UserGradeEnum.TEAM_LEADER.intCode() == grade
+                    || UserGradeEnum.ASSISTANT.intCode() == grade)
+            {
+                maxSkuQuality = systemParamService.getInteger("OUTSTOCK_ITEM_MAXSKU_LEADER") ;
+                maxSkuPrice = systemParamService.getInteger("OUTSTOCK_ITEM_MAXPRICE_LEADER");
+            }
+
+            if (UserGradeEnum.SUPERVISOR.intCode() == grade)
+            {
+                maxSkuQuality = systemParamService.getInteger("OUTSTOCK_ITEM_MAXSKU_SUPERVISOR");
+                maxSkuPrice = systemParamService.getInteger("OUTSTOCK_ITEM_MAXPRICE_SUPERVISOR");
+            }
+
+            if (UserGradeEnum.ASSISTANT_MANAGER.intCode() == grade)
+            {
+                maxSkuPrice = systemParamService.getInteger("OUTSTOCK_ITEM_MAXPRICE_ASSISTANT_MANAGER");
+            }
+        }
+
+        skuMaximumMap.put("maxSkuQuality", maxSkuQuality);
+        skuMaximumMap.put("maxSkuPrice", maxSkuPrice);
+
+        return skuMaximumMap;
+    }
+}

@@ -1,0 +1,60 @@
+package com.bessky.warehouse.inOutstock.stock.out.type;
+
+import com.bessky.common.model.type.CodeNameEnum;
+
+import java.util.Arrays;
+
+/**
+ * 出库状态枚举类
+ *
+ * @author dinggaunghui
+ * @date 2021/08/12
+ */
+public enum OutStateEnum implements CodeNameEnum
+{
+	UNCONFIRM("1", "未确认出库"),
+
+	CONFIRMED("2", "已确认出库"),
+
+	WAITING_APPROVAL("3", "待审核"),
+
+	DISCARDED("4", "已废弃");
+
+	private String code;
+
+	private String display;
+
+    OutStateEnum(String code, String display)
+	{
+		this.code = code;
+		this.display = display;
+	}
+
+	public static OutStateEnum build(int code)
+	{
+		return Arrays.stream(values()).filter(type -> type.intCode() == code).findAny().orElse(null);
+	}
+
+	public static OutStateEnum build(String display)
+	{
+		return Arrays.stream(values()).filter(type -> type.display.equals(display)).findAny().orElse(null);
+	}
+
+	@Override
+	public String code()
+	{
+		return this.code;
+	}
+
+	@Override
+	public String display()
+	{
+		return this.display;
+	}
+
+	public int intCode()
+	{
+		return Integer.parseInt(this.code);
+	}
+
+}

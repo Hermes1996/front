@@ -1,0 +1,150 @@
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style type="text/css">
+        .demo {
+            background-color: #fff111;
+            width: 150px;
+            height: 350px;
+        }
+        /*PASS*/
+        #pass-top {
+            background-color: lightseagreen;
+            bottom: 180px;
+            float: right;
+            position: fixed;
+            right: 15px;
+            z-index: 10;
+        }
+        #pass-top a {
+            display: block;
+            height: 40px;
+            width: 40px;
+            font-size: 16px;
+        }
+        /*NG*/
+        #ng-top {
+            background-color: darkred;
+            bottom: 120px;
+            float: right;
+            right: -24px;
+            position: relative;
+            z-index: 10;
+        }
+        #ng-top a {
+            display: block;
+            height: 40px;
+            width: 40px;
+            font-size: 16px;
+        }
+        #d-top {
+            position: relative;
+            bottom: 140px;
+            float: right;
+            right: -10px;
+            background-color: burlywood;
+            height: 40px;
+            width: 40px;
+        }
+    </style>
+</head>
+
+<body style="overflow: scroll">
+<p>如果元素中的内容超出了给定的宽度和高度属性，overflow 属性可以确定是否显示滚动条等行为。</p>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+<div class="demo">
+    这个属性定义溢出元素内容区的内容会如何处理。如果值为 scroll，不论是否需要，用户代理都会提供一种滚动机制。因此，有可能即使元素框中可以放下所有内容也会出现滚动条。默认值是 visible。
+</div>
+
+<div id="d-top">
+    <a id="d-top-a" title="返回顶部"></a>
+</div>
+
+<div id="pass-top">
+    <a id="pass-top-a"  title="OK" href="javascript:void(0);"><i class="icon-ok"></i></a>
+</div>
+
+<div id="ng-top">
+    <a id="ng-top-a" title="NG" href="javascript:void(0);"><i class="icon-remove"></i></a>
+</div>
+</body>
+
+<script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+<script>
+    $(function () {
+
+        $(window).scroll(function () {
+
+            var scrollT =  document.body.scrollTop||document.documentElement.scrollTop ;
+            var scrollH = document.body.scrollHeight|| document.documentElement.scrollHeight ;
+            var clientH =document.body.clientHeight ||  document.documentElement.clientHeight ;
+            console.log(scrollT + "+" + scrollH + "+" + clientH);
+            if (scrollT == scrollH - clientH) {
+                $(alert("到底部了"));
+            } else if (scrollT == 0) {
+                $(alert("到顶部了"));
+            }
+        });
+        // 点击回到顶部的元素
+        $("#d-top").click(function () {
+            // 以1秒的间隔返回顶部
+            $('body, html').animate({
+                scrollTop: 0
+            });
+        });
+
+
+    });
+    //标题固定
+    $(function() {
+
+        $(window).scroll(function () {
+            // 若滚动条离顶部大于200元素
+            if ($(window).scrollTop() > 200) {
+                $("#d-top").fadeIn(500);// 以1秒的间隔渐显id=gotop的元素
+                $("#pass-top").hide()
+            } else {
+                $("#d-top").fadeOut(500);// 以1秒的间隔渐隐id=gotop的元素
+            }
+        });
+
+        // 点击回到顶部的元素
+        $("#d-top").click(function (e) {
+            // 以1秒的间隔返回顶部
+            $('body, html').animate({
+                scrollTop: 0
+            });
+        })
+    });
+</script>
+
+</html>

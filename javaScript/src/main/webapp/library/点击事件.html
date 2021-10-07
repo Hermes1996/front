@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>js点击事件</title>
+</head>
+<!--onload 和 onunload 事件会在用户进入或离开页面时被触发-->
+<body onload="checkCookies()">
+<!--点击事件-->
+<!--f(this)相当于 省略id="demo" var x =documnet.getElementById("demo")-->
+<h1 onclick="f(this)">点我抽奖</h1>
+<h1 onclick="this.innerHTML='恭喜中奖！'">点我抽奖</h1>
+<!--按钮-->
+<button type="button" onclick="showTime()">显示时间</button>
+<p id="demo"></p>
+<!--输入框字段效验onchange-->
+输入你的英文名：<input type="text"  onchange="nameChange(this)">
+<!--onmouseover 和 onmouseout 事件可用于在用户的鼠标移至 HTML 元素上方或移出元素时触发函数-->
+<!--div做文本框-->
+<br>
+<br>
+<div onmouseover="mOver(this)"  onmouseout="mOut(this)" style="background-color:#D94A38;width:120px;height:20px;padding:40px;">鼠标移过来</div>
+<!--addEventListener()添加事件-->
+<br>
+<button type="button" id="demoTime">显示时间</button>
+</body>
+<script>
+    function checkCookies() {
+        if(navigator.cookieEnabled==1){alert("cookies可用")}
+        else{alert("cookies不可用")}
+    }
+    function f(id) {
+        id.innerHTML="恭喜中奖！"
+    }
+    function showTime() {
+        document.getElementById("demo").innerHTML=Date()
+    }
+    function nameChange(id) {
+        id.value=id.value.toUpperCase();
+    }
+    function mOver(id) {
+        id.innerHTML="鼠标移过去"
+    }
+    function mOut(id) {
+        id.innerHTML="谢谢"
+    }
+    // 这里showTime加（）就直接执行了
+    document.getElementById("demoTime").addEventListener("click",showTime)
+</script>
+</html>

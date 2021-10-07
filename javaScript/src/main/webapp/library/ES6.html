@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ES6新特性</title>
+</head>
+<body>
+<p id="demo"></p>
+<script>
+//箭头函数
+    const element = function (x, y) {
+        return x * y
+    };
+    //改写
+    const element0 = (x, y) =>{
+        return x * y
+    };
+    // 方法体{}只有return语句时，可省return和{}
+    const element1 = (x, y) => x * y;
+    //参数唯一，可省括号
+    const element2 = x => x +500;
+    // ES6设置默认参数
+    const element3=(x,y=500)=>x*y;
+    document.getElementById("demo").innerHTML=element3(5);
+
+//es6的扩展运算符...
+    //数组展开
+    function sum(x, y, z) {
+        return x + y + z;
+    }
+
+    const numbers = [1, 2, 3];
+    console.log(sum(...numbers));
+    console.log(sum.apply(null, numbers));
+
+    // 迭代器展开
+    var mapMap = new Map();
+    mapMap.set(1, "mapKeyA");
+    mapMap.set(2, "mapKeyB");
+    console.log([...mapMap.keys()][0]);
+
+
+    // 数组/对象拼接
+    var arr1 = [0, 1, 2];
+    var arr2 = [3, 4, 5];
+    var arr3 = [...arr1, ...arr2];
+    console.log(arr3);
+
+
+    // 深拷贝
+    let a = {
+        name1: "1",
+        name2: "2",
+        name3: "4",
+        name4: "5",
+    };
+    let b = {...a};
+    console.log(b); //{ name1: "1",name2: "2",name3: "4",name4: "5"};
+    b.name1 = "1111";
+    console.log(b); //{ name1: "111",name2: "2",name3: "4",name4: "5"};
+    console.log(a); //{ name1: "1",name2: "2",name3: "4",name4: "5"};
+
+
+</script>
+<!--var xx= function () {};var申明函数,引用需要加括号，xx（）-->
+
+<!--const 与 let 变量-->
+<!--var是函数作用域;let是块作用域{}内生效。比如for循环内定义的一个var变量，循环以外也是可以访问;for循环推荐用let-->
+<!--let不能在定义之前访问该变量，但是var可以实现变量声明提升。比如先打印变量再定义不会报错;没啥用-->
+<!--let不能被重新定义，但是var是可以的；*定义不等于重新赋值；没啥用-->
+
+<!--const a ;//报错,一旦声明变量，应该立即赋值-->
+<!--const b = 2;b = 3;//报错，因为定义常量之后不能成重新赋值！！-->
+</body>
+</html>

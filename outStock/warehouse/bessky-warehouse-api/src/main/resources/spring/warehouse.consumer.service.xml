@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:dubbo="http://code.alibabatech.com/schema/dubbo"
+       xmlns="http://www.springframework.org/schema/beans"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	http://code.alibabatech.com/schema/dubbo
+	http://code.alibabatech.com/schema/dubbo/dubbo.xsd">
+
+    <!-- 库位列表服务接口 -->
+    <dubbo:reference id="rpcLocationNumberService"
+                     interface="com.bessky.warehouse.location.number.service.LocationNumberService"/>
+
+    <!-- 库位绑定服务接口 -->
+    <dubbo:reference id="rpcLocationNumberBindService"
+                     interface="com.bessky.warehouse.location.bind.service.LocationNumberBindService"/>
+
+    <!-- 库位锁定服务接口 -->
+    <dubbo:reference id="rpcLocationNumberLockService"
+                     interface="com.bessky.warehouse.location.lock.service.LocationNumberLockService"/>
+
+    <!-- 暂存库位服务接口 -->
+    <dubbo:reference id="rpcTempLocationNumberService"
+                     interface="com.bessky.warehouse.location.number.service.TempLocationNumberService"/>
+
+    <!-- 库位区域服务接口 -->
+    <dubbo:reference id="rpcLocationAreaService"
+                     interface="com.bessky.warehouse.location.area.service.LocationAreaService"/>
+
+    <!-- 暂存库位绑定服务接口 -->
+    <dubbo:reference id="rpcTempLocationBindService"
+            interface="com.bessky.warehouse.location.bind.service.TempLocationBindService"/>
+
+    <!-- 转接头配置服务接口 -->
+    <dubbo:reference id="rpcAdaptorService"
+                     interface="com.bessky.warehouse.system.adaptor.service.AdaptorService" />
+
+    <!-- 出库重量配置服务接口 -->
+    <dubbo:reference id="rpcOutStockWeightConfService"
+                     interface="com.bessky.warehouse.system.weight.service.OutStockWeightConfService" />
+</beans>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>通过DOM获取HTML元素，改变内容和CSS</title>
+</head>
+<body>
+<div id="demo">
+    <p>段落1</p>
+    <p>段落2</p>
+</div>
+
+</body>
+<script>
+    var x=document.getElementById("demo");
+    var y=x.getElementsByTagName("p");
+    // 动态，.querySelectorAll("p")为静态y.length不变;
+    document.write("选定内容为"+y[0].innerHTML);
+    y[1].style.color="teal";
+    y[1].style.fontFamily="Arial";
+    y[1].style.fontSize="larger";
+    for (let i = 0; i <y.length ; i++) {
+        y[i].style.fontSize="medium"
+    }
+    
+    
+    // 增加元素节点
+    var para = document.createElement("p");
+    var textNode = document.createTextNode("段落3");
+    para.style.color="red";
+    para.appendChild(textNode);
+    x.appendChild(para);
+    console.log(y.length)
+
+</script>
+</html>

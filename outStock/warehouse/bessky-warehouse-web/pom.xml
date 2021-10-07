@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.bessky</groupId>
+        <artifactId>bessky-warehouse</artifactId>
+        <version>3.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>bessky-warehouse-web</artifactId>
+
+    <properties>
+        <java.version>1.8</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <dependencies>
+        <!-- 依赖核心工程 -->
+        <dependency>
+            <groupId>com.bessky</groupId>
+            <artifactId>bessky-warehouse-core</artifactId>
+            <version>${warehouse.version}</version>
+        </dependency>
+
+        <!-- 依赖公共工程 -->
+        <dependency>
+            <groupId>com.bessky</groupId>
+            <artifactId>bessky-common-web</artifactId>
+            <version>${common.version}</version>
+        </dependency>
+
+        <!-- 依赖接口工程 -->
+        <dependency>
+            <groupId>com.bessky</groupId>
+            <artifactId>bessky-user-api</artifactId>
+            <version>${user.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bessky</groupId>
+            <artifactId>bessky-product-api</artifactId>
+            <version>${product.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.bessky</groupId>
+            <artifactId>bessky-tool-api</artifactId>
+            <version>${tool.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <finalName>bessky-warehouse-web</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>com.bessky.warehouse.BesskyWarehouseWebApplication</mainClass>
+                    <executable>true</executable>
+                    <classifier>exec</classifier>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>dockerfile-maven-plugin</artifactId>
+                <version>1.4.13</version>
+                <executions>
+                    <execution>
+                        <id>version</id>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>push</goal>
+                        </goals>
+                        <configuration>
+                            <tag>${maven.build.timestamp}</tag>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>latest</id>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>push</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <repository>192.168.99.182:8082/${project.artifactId}</repository>
+                    <username>deployment</username>
+                    <password>Li721Zhong</password>
+                    <buildArgs>
+                        <JAR_FILE>${project.build.finalName}-exec.jar</JAR_FILE>
+                    </buildArgs>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

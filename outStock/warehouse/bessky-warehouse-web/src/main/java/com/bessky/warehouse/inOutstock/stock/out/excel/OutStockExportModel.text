@@ -1,0 +1,76 @@
+package com.bessky.warehouse.inOutstock.stock.out.excel;
+
+import com.alibaba.excel.annotation.ExcelProperty;
+import com.alibaba.excel.annotation.write.style.ColumnWidth;
+import lombok.Data;
+
+/**
+ * 出库表格导出模板
+ *
+ * @author dinggaunghui
+ * @date 2021/08/12
+ */
+@Data
+@ColumnWidth(14)
+public class OutStockExportModel
+{
+    @ExcelProperty("编号")
+    private String outId;
+
+    @ExcelProperty("SKU")
+    private String sku;
+
+    @ExcelProperty("出库数量")
+    private String quantity;
+
+    @ExcelProperty("价格")
+    private Double price;
+
+    @ExcelProperty("合计")
+    private Double totalPrice;
+
+    @ExcelProperty("系统订单号")
+    private String systemOrderId;
+
+    @ExcelProperty("子条目编号")
+    private String id;
+
+    @ExcelProperty("运输号")
+    private String transationId;
+
+    @ExcelProperty("销售者账号")
+    private String account;
+
+    @ExcelProperty("销售平台")
+    private String platform;
+
+    @ExcelProperty("SKU备注")
+    private String remark;
+
+    @ExcelProperty("出库类型")
+    private String type;
+
+    @ExcelProperty("出库人")
+    private String createdBy;
+
+    @ExcelProperty("仓库")
+    private String warehouseName;
+
+    @ExcelProperty("目标仓库")
+    private String targetWarehouse;
+
+    @ExcelProperty("出库状态")
+    private String state;
+
+    @ExcelProperty("出库时间")
+    private String createTime;
+
+    @ExcelProperty("平台交易号")
+    private String platformOrderId;
+
+    @ExcelProperty("库位号")
+    private String locationNumber;
+
+    @ExcelProperty("检货人")
+    private String picker;
+}
