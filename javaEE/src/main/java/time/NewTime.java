@@ -1,5 +1,6 @@
 package time;
 
+import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -10,8 +11,13 @@ import java.util.Date;
 public class NewTime{
 	public static void main(String[] args) throws ParseException
 	{
+		// 时间戳
+		Timestamp now= new Timestamp(System.currentTimeMillis());
+		System.out.println(now);
+
 		//LocalDate直接获取当月天数
 		LocalDate date = LocalDate.now();	//java8 生成当地时间-年月日
+		System.out.println(date);
 		int dayOfMonth = date.getDayOfMonth();
 
 		//date表示的一周中的第几天

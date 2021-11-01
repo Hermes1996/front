@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<sqlmap >
+  <sql datasource="dataSource" id="querySpecialProcessByPrimaryKey" >
+    <content>
+      <![CDATA[
+        SELECT process.id, process.purchase_order, process.warehouse_id, process.state, process.sku, process.process_quantity, process.process_hour, process.process_amount, process.apply_reason,
+        process.supplier_pay_number, process.remark, process.create_time, process.create_by, process.update_time, process.update_by, process.complete_time
+        FROM t_special_process process
+        WHERE process.id = :id
+      ]]>
+    </content>
+  </sql>
+
+  <sql datasource="dataSource" id="querySpecialProcessCount" >
+    <content>
+      <![CDATA[
+        SELECT COUNT(1)
+        FROM t_special_process process
+        WHERE 1 = 1
+        <[AND process.id = :id]>
+        <[AND process.purchase_order = :purchase_order]>
+        <[AND process.warehouse_id = :warehouse_id]>
+        <[AND process.state = :state]>
+        <[AND process.sku = :sku]>
+        <[AND process.process_quantity = :process_quantity]>
+        <[AND process.process_hour = :process_hour]>
+        <[AND process.process_amount = :process_amount]>
+        <[AND process.apply_reason = :apply_reason]>
+        <[AND process.supplier_pay_number = :supplier_pay_number]>
+        <[AND process.remark = :remark]>
+        <[AND process.create_time >= :from_create_time]>
+        <[AND process.create_time <= :to_create_time]>
+        <[AND process.create_by = :create_by]>
+        <[AND process.update_time >= :from_update_time]>
+        <[AND process.update_time <= :to_update_time]>
+        <[AND process.update_by = :update_by]>
+        <[AND process.complete_time >= :from_complete_time]>
+        <[AND process.complete_time <= :to_complete_time]>
+        <[AND process.remark LIKE (:like_remark)]>
+        <[AND process.apply_reason LIKE (:like_apply_reason)]>
+        <[AND process.id IN (:ids)]>
+        <[AND process.sku IN (:skus)]>
+        <[AND process.state IN (:states)]>
+        <[AND process.create_by IN (:user_list)]>
+        <[AND process.warehouse_id IN (:warehouse_ids)]>
+        <[AND process.warehouse_id IN (:warehouse_id_list)]>
+        <[AND process.purchase_order IN (:purchase_orders)]>
+        <[AND process.supplier_pay_number IN (:supplier_pay_numbers)]>
+        <[AND process.purchase_order IN (SELECT purchase_order FROM t_purchase_order WHERE supplier_id = (select supplier_id from t_supplier WHERE supplier_number = :supplier_number))]>
+      ]]>
+    </content>
+  </sql>
+  
+  <sql datasource="dataSource" id="querySpecialProcessList" >
+    <content>
+      <![CDATA[
+        SELECT process.id, process.purchase_order, process.warehouse_id, process.state, process.sku, process.process_quantity, process.process_hour, process.process_amount, process.apply_reason,
+        process.supplier_pay_number, process.remark, process.create_time, process.create_by, process.update_time, process.update_by, process.complete_time
+        FROM t_special_process process
+        WHERE 1 = 1
+        <[AND process.id = :id]>
+        <[AND process.purchase_order = :purchase_order]>
+        <[AND process.warehouse_id = :warehouse_id]>
+        <[AND process.state = :state]>
+        <[AND process.sku = :sku]>
+        <[AND process.process_quantity = :process_quantity]>
+        <[AND process.process_hour = :process_hour]>
+        <[AND process.process_amount = :process_amount]>
+        <[AND process.apply_reason = :apply_reason]>
+        <[AND process.supplier_pay_number = :supplier_pay_number]>
+        <[AND process.remark = :remark]>
+        <[AND process.create_time >= :from_create_time]>
+        <[AND process.create_time <= :to_create_time]>
+        <[AND process.create_by = :create_by]>
+        <[AND process.update_time >= :from_update_time]>
+        <[AND process.update_time <= :to_update_time]>
+        <[AND process.update_by = :update_by]>
+        <[AND process.complete_time >= :from_complete_time]>
+        <[AND process.complete_time <= :to_complete_time]>
+        <[AND process.remark LIKE (:like_remark)]>
+        <[AND process.apply_reason LIKE (:like_apply_reason)]>
+        <[AND process.id IN (:ids)]>
+        <[AND process.sku IN (:skus)]>
+        <[AND process.state IN (:states)]>
+        <[AND process.create_by IN (:user_list)]>
+        <[AND process.warehouse_id IN (:warehouse_ids)]>
+        <[AND process.warehouse_id IN (:warehouse_id_list)]>
+        <[AND process.purchase_order IN (:purchase_orders)]>
+        <[AND process.supplier_pay_number IN (:supplier_pay_numbers)]>
+        <[AND process.purchase_order IN (SELECT purchase_order FROM t_purchase_order WHERE supplier_id = (select supplier_id from t_supplier WHERE supplier_number = :supplier_number))]>
+        ORDER BY process.update_time DESC
+      ]]>
+    </content>
+  </sql>
+  
+  <sql datasource="dataSource" id="createSpecialProcess" >
+    <content>
+      <![CDATA[
+        INSERT INTO t_special_process (purchase_order, warehouse_id, state, sku, process_quantity, process_hour, process_amount, apply_reason,
+        supplier_pay_number, remark, create_time, create_by, update_time, update_by, complete_time)
+        VALUES (:purchase_order, :warehouse_id, :state, :sku, :process_quantity, :process_hour, :process_amount, :apply_reason,
+        :supplier_pay_number, :remark, :create_time, :create_by, :update_time, :update_by, :complete_time)
+      ]]>
+    </content>
+  </sql>
+  
+  <sql datasource="dataSource" id="updateSpecialProcess" >
+    <content >
+      <![CDATA[
+        UPDATE t_special_process
+        SET <[purchase_order = :purchase_order,]>
+        <[warehouse_id = :warehouse_id,]>
+        <[state = :state,]>
+        <[sku = :sku,]>
+        <[process_quantity = :process_quantity,]>
+        <[process_hour = :process_hour,]>
+        <[process_amount = :process_amount,]>
+        <[apply_reason = :apply_reason,]>
+        <[supplier_pay_number = :supplier_pay_number,]>
+        <[remark = :remark,]>
+        <[update_by = :update_by,]>
+        <[complete_time = :complete_time,]>
+        <[update_time = :update_time, ]>
+        id = id
+        WHERE id = :id
+      ]]>
+    </content>
+  </sql>
+</sqlmap>

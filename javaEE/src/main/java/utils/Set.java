@@ -1,10 +1,12 @@
 package utils;
 
 import lombok.Data;
-import org.springframework.beans.BeanUtils;
+import org.apache.commons.beanutils.BeanUtils;
+
+import java.lang.reflect.InvocationTargetException;
 
 public class Set{
-    public static void main(String[] args)
+    public static void main(String[] args) throws InvocationTargetException, IllegalAccessException
     {
         Employee employee = new Employee();
         employee.setName("A");
@@ -30,34 +32,24 @@ public class Set{
 @Data
 class Employee
 {
-
-
     private String name;
 
-
     private Integer age;
-
 }
 @Data
 class EmployeeF extends Employee
 {
-
-
     private String name;
-
 
     private Integer age;
 
     private boolean sex;
 
     private F father;
-
-
 }
 @Data
 class F
 {
-
     private String F1;
 
     private Integer F2;
