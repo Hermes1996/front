@@ -59,7 +59,16 @@ public class NewTime{
 		SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-01  00:00:00");
 		String startTime = sdf2.format(cal.getTime()); // 上月第一天
 
-
+        //时间比较
+		Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+		long timestampLong = timestamp.getTime();
+		long yesterdayLong = new Timestamp(System.currentTimeMillis()).getTime() - 24 * 60 * 60 * 1000L;
+		if (yesterdayLong < timestampLong)
+		{
+			System.out.println("今天比昨天大");
+			System.out.println("昨天"+ new Date(yesterdayLong));
+			System.out.println("昨天"+ new Timestamp(yesterdayLong));
+		}
 
 		System.out.println("finish");
 
