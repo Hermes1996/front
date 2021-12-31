@@ -1,0 +1,270 @@
+package com.bessky.erp.warehouse.reparation.dao.impl;
+
+import java.sql.Timestamp;
+import java.util.List;
+
+import com.bessky.erp.warehouse.reparation.dao.mapper.ReparationAndItemMapper;
+import org.apache.commons.lang.StringUtils;
+import org.springframework.stereotype.Repository;
+import org.springframework.util.Assert;
+
+import com.bessky.erp.core.common.bean.Pager;
+import com.bessky.erp.core.common.util.CommonUtils;
+import com.bessky.erp.foundation.sqler.SqlerRequest;
+import com.bessky.erp.foundation.sqler.analyzer.DataType;
+import com.bessky.erp.foundation.sqler.template.SqlerTemplate;
+import com.bessky.erp.starter.core.constants.AssertConstants;
+import com.bessky.erp.starter.core.context.DataContextHolder;
+import com.bessky.erp.warehouse.reparation.bean.Reparation;
+import com.bessky.erp.warehouse.reparation.bean.ReparationQueryCondition;
+import com.bessky.erp.warehouse.reparation.dao.ReparationDao;
+import com.bessky.erp.warehouse.reparation.dao.mapper.ReparationDBField;
+import com.bessky.erp.warehouse.reparation.dao.mapper.ReparationMapper;
+
+@Repository("reparationDao")
+public class ReparationDaoImpl implements ReparationDao
+{
+
+    private void setQueryCondition(SqlerRequest request, ReparationQueryCondition query)
+    {
+        if (query == null)
+        {
+            return;
+        }
+        // 添加查询条件
+        // 搜索条件不允许出现空字符
+        request.setAllowBlank(false);
+
+        request.addDataParam(ReparationDBField.REPARATION_ID, DataType.INT, query.getReparationId());
+
+        request.addDataParam("reparation_id_list" , DataType.INT , query.getReparationIds());
+        request.addDataParam(ReparationDBField.CREATED_BY, DataType.INT, query.getCreatedBy());
+        request.addDataParam(ReparationDBField.CONFIRMED_BY, DataType.INT, query.getConfirmedBy());
+        request.addDataParam(ReparationDBField.REPARATION_DATE, DataType.STRING, query.getReparationDate());
+        request.addDataParam(ReparationDBField.REPARATION_BY, DataType.INT, query.getReparationBy());
+        request.addDataParam(ReparationDBField.IS_LOST, DataType.INT, query.getIsLost());
+        request.addDataParam(ReparationDBField.IS_CONFIRMED, DataType.BOOLEAN, query.getIsConfirmed());
+        request.addDataParam(ReparationDBField.IS_REPARATED, DataType.BOOLEAN, query.getIsReparated());
+        request.addDataParam(ReparationDBField.ORDER_ID, DataType.INT, query.getOrderId());
+        request.addDataParam("buyer_country_code", DataType.STRING, query.getBuyerCountryCode());
+
+        request.addDataParam("from_deliver_date", DataType.STRING, query.getFromDeliverDate());
+        request.addDataParam("to_deliver_date", DataType.STRING, query.getToDeliverDate());
+
+        request.addDataParam("from_reparation_date", DataType.STRING, query.getFromReparationDate());
+        request.addDataParam("to_reparation_date", DataType.STRING, query.getToReparationDate());
+
+        request.addDataParam("from_creation_date", DataType.STRING, query.getFromCreationDate());
+        request.addDataParam("to_creation_date", DataType.STRING, query.getToCreationDate());
+        request.addDataParam("tracking_number", DataType.STRING, query.getTrackingNumber());
+
+        if (query.getOrderIds() != null && query.getOrderIds().size() > 0)
+        {
+            if (query.getOrderIds().size() > 1)
+            {
+                request.addDataParam("order_id_list", DataType.INT, query.getOrderIds());
+            }
+            else
+            {
+                request.addDataParam(ReparationDBField.ORDER_ID, DataType.INT, query.getOrderIds().get(0));
+            }
+        }
+
+        if (query.getLogisticsTypes() != null && query.getLogisticsTypes().size() > 0)
+        {
+            if (query.getLogisticsTypes().size() > 1)
+            {
+                request.addDataParam("logistics_type_list", DataType.INT, query.getOrderIds());
+            }
+            else
+            {
+                request.addDataParam("logistics_type", DataType.INT, query.getLogisticsTypes().get(0));
+            }
+        }
+        // 赔偿状态， 支持多个状态查询
+        if (StringUtils.isNotBlank(query.getMultiReparatStatus()))
+        {
+            List<Integer> statusList = CommonUtils.splitIntList(query.getMultiReparatStatus(), ",");
+            request.addDataParam("multi_reparat_status", DataType.INT, statusList);
+        }
+        // 跟踪号， 支持多个查询
+        if (StringUtils.isNotBlank(query.getMultiTrackingNumber()))
+        {
+            List<String> trackingNumbers = CommonUtils.splitList(query.getMultiTrackingNumber(), ",");
+            request.addDataParam("multi_tracking_number", DataType.STRING, trackingNumbers);
+        }
+    }
+
+    @Override
+    public int queryReparationCount(ReparationQueryCondition query)
+    {
+        SqlerRequest request = new SqlerRequest("queryReparationCount");
+        setQueryCondition(request, query);
+        return SqlerTemplate.queryForInt(request);
+    }
+
+    @Override
+    public List<Reparation> queryReparationList()
+    {
+        SqlerRequest request = new SqlerRequest("queryReparationList");
+        return SqlerTemplate.query(request, new ReparationMapper());
+    }
+
+    @Override
+    public List<Reparation> queryReparationList(ReparationQueryCondition query, Pager pager)
+    {
+        // 查询物流轨迹明细
+        if (query.getQueryReparationItems())
+        {
+            SqlerRequest request = new SqlerRequest("queryReparationAndItemList");
+            setQueryCondition(request, query);
+            if (pager != null)
+            {
+                request.addFetch(pager.getPageNo(), pager.getPageSize());
+            }
+            return SqlerTemplate.query(request, new ReparationAndItemMapper());
+        }
+        else
+        {
+            SqlerRequest request = new SqlerRequest("queryReparationList");
+            setQueryCondition(request, query);
+            if (pager != null)
+            {
+                request.addFetch(pager.getPageNo(), pager.getPageSize());
+            }
+            return SqlerTemplate.query(request, new ReparationMapper());
+        }
+    }
+
+    @Override
+    public Reparation queryReparation(Integer primaryKey)
+    {
+        Assert.notNull(primaryKey, AssertConstants.NOT_NULL_MSG);
+        SqlerRequest request = new SqlerRequest("queryReparationByPrimaryKey");
+        request.addDataParam(ReparationDBField.REPARATION_ID, DataType.INT, primaryKey);
+        return SqlerTemplate.queryForObject(request, new ReparationMapper());
+    }
+
+    @Override
+    public void createReparation(Reparation entity)
+    {
+        SqlerRequest request = new SqlerRequest("createReparation");
+        request.addDataParam(ReparationDBField.ORDER_ID, DataType.INT, entity.getOrderId());
+        request.addDataParam(ReparationDBField.CREATED_BY, DataType.INT, entity.getCreatedBy() == null ? DataContextHolder.getUserId() : entity.getCreatedBy());
+        request.addDataParam(ReparationDBField.CREATION_DATE, DataType.TIMESTAMP, new Timestamp(System.currentTimeMillis()));
+        request.addDataParam(ReparationDBField.IS_LOST, DataType.INT, entity.getIsLost());
+        request.addDataParam(ReparationDBField.IS_CONFIRMED, DataType.BOOLEAN, entity.getIsConfirmed());
+        request.addDataParam(ReparationDBField.REPARATION_DATE, DataType.TIMESTAMP, entity.getReparationDate());
+        request.addDataParam(ReparationDBField.REPARATION_BY, DataType.INT, entity.getReparationBy());
+        request.addDataParam(ReparationDBField.REPARATION_TOTAL_AMOUNT, DataType.DOUBLE, entity.getReparationTotalAmount());
+        request.addDataParam(ReparationDBField.REPARATED_AMOUNT, DataType.DOUBLE, entity.getReparatedAmount());
+        request.addDataParam(ReparationDBField.IS_REPARATED, DataType.BOOLEAN, entity.getIsReparated());
+        request.addDataParam(ReparationDBField.REMARK, DataType.STRING, entity.getRemark());
+        request.addDataParam(ReparationDBField.CONFIRMED_DATE, DataType.TIMESTAMP, entity.getConfirmedDate());
+        request.addDataParam(ReparationDBField.CONFIRMED_BY, DataType.INT, entity.getConfirmedBy());
+        request.addDataParam(ReparationDBField.REPARAT_METHOD, DataType.STRING, entity.getReparatMethod());
+        request.addDataParam(ReparationDBField.REPARAT_DETAILS, DataType.STRING, entity.getReparatDetails());
+        request.addDataParam(ReparationDBField.REPARAT_STATUS, DataType.INT, entity.getReparatStatus());
+        request.addDataParam(ReparationDBField.IMPORT_COUNT, DataType.INT, entity.getImportCount());
+        Integer autoIncrementId = SqlerTemplate.executeAndReturn(request);
+        entity.setReparationId(autoIncrementId);
+    }
+
+    @Override
+    public void updateReparation(Reparation entity)
+    {
+        Assert.notNull(entity.getReparationId(), AssertConstants.NOT_NULL_MSG);
+
+        SqlerRequest request = new SqlerRequest("updateReparationByPrimaryKey");
+        request.addDataParam(ReparationDBField.REPARATION_ID, DataType.INT, entity.getReparationId());
+        request.addDataParam(ReparationDBField.ORDER_ID, DataType.INT, entity.getOrderId());
+        request.addDataParam(ReparationDBField.IS_LOST, DataType.INT, entity.getIsLost());
+        request.addDataParam(ReparationDBField.IS_CONFIRMED, DataType.BOOLEAN, entity.getIsConfirmed());
+        request.addDataParam(ReparationDBField.REPARATION_DATE, DataType.TIMESTAMP, entity.getReparationDate());
+        request.addDataParam(ReparationDBField.REPARATION_BY, DataType.INT, entity.getReparationBy());
+        request.addDataParam(ReparationDBField.REPARATION_TOTAL_AMOUNT, DataType.DOUBLE, entity.getReparationTotalAmount());
+        request.addDataParam(ReparationDBField.REPARATED_AMOUNT, DataType.DOUBLE, entity.getReparatedAmount());
+        request.addDataParam(ReparationDBField.IS_REPARATED, DataType.BOOLEAN, entity.getIsReparated());
+        request.addDataParam(ReparationDBField.REMARK, DataType.STRING, entity.getRemark());
+        request.addDataParam(ReparationDBField.CONFIRMED_DATE, DataType.TIMESTAMP, entity.getConfirmedDate());
+        request.addDataParam(ReparationDBField.CONFIRMED_BY, DataType.INT, entity.getConfirmedBy());
+        request.addDataParam(ReparationDBField.REPARAT_METHOD, DataType.STRING, entity.getReparatMethod());
+        request.addDataParam(ReparationDBField.REPARAT_DETAILS, DataType.STRING, entity.getReparatDetails());
+        request.addDataParam(ReparationDBField.REPARAT_STATUS, DataType.INT, entity.getReparatStatus());
+        request.addDataParam(ReparationDBField.IMPORT_COUNT, DataType.INT, entity.getImportCount());
+        SqlerTemplate.execute(request);
+    }
+
+    @Override
+    public void batchCreateReparation(List<Reparation> entityList)
+    {
+        if (entityList != null && !entityList.isEmpty())
+        {
+            SqlerRequest request = new SqlerRequest("createReparation");
+            for (Reparation entity : entityList)
+            {
+                request.addBatchDataParam(ReparationDBField.ORDER_ID, DataType.INT, entity.getOrderId());
+                request.addBatchDataParam(ReparationDBField.CREATED_BY, DataType.INT, entity.getCreatedBy() == null ? DataContextHolder.getUserId() : entity.getCreatedBy());
+                request.addBatchDataParam(ReparationDBField.CREATION_DATE, DataType.TIMESTAMP, new Timestamp(System.currentTimeMillis()));
+                request.addBatchDataParam(ReparationDBField.REPARATION_DATE, DataType.TIMESTAMP, entity.getReparationDate());
+                request.addBatchDataParam(ReparationDBField.REPARATION_BY, DataType.INT, entity.getReparationBy());
+                request.addBatchDataParam(ReparationDBField.REPARATION_TOTAL_AMOUNT, DataType.DOUBLE, entity.getReparationTotalAmount());
+                request.addBatchDataParam(ReparationDBField.REPARATED_AMOUNT, DataType.DOUBLE, entity.getReparatedAmount());
+                request.addBatchDataParam(ReparationDBField.IS_REPARATED, DataType.BOOLEAN, entity.getIsReparated());
+                request.addBatchDataParam(ReparationDBField.REMARK, DataType.STRING, entity.getRemark());
+                request.addBatchDataParam(ReparationDBField.CONFIRMED_DATE, DataType.TIMESTAMP, entity.getConfirmedDate());
+                request.addBatchDataParam(ReparationDBField.CONFIRMED_BY, DataType.INT, entity.getConfirmedBy());
+                request.addBatchDataParam(ReparationDBField.IS_LOST, DataType.INT, entity.getIsLost());
+                request.addBatchDataParam(ReparationDBField.REPARAT_METHOD, DataType.STRING, entity.getReparatMethod());
+                request.addBatchDataParam(ReparationDBField.REPARAT_DETAILS, DataType.STRING, entity.getReparatDetails());
+                request.addBatchDataParam(ReparationDBField.REPARAT_STATUS, DataType.INT, entity.getReparatStatus());
+                request.addBatchDataParam(ReparationDBField.IMPORT_COUNT, DataType.INT, entity.getImportCount());
+                request.addBatch();
+            }
+            SqlerTemplate.batchUpdate(request);
+        }
+    }
+
+    @Override
+    public void batchUpdateReparation(List<Reparation> entityList)
+    {
+        if (entityList != null && !entityList.isEmpty())
+        {
+            SqlerRequest request = new SqlerRequest("updateReparationByPrimaryKey");
+            for (Reparation entity : entityList)
+            {
+                Assert.notNull(entity.getReparationId(), AssertConstants.NOT_NULL_MSG);
+                request.addBatchDataParam(ReparationDBField.REPARATION_ID, DataType.INT, entity.getReparationId());
+
+                request.addBatchDataParam(ReparationDBField.ORDER_ID, DataType.INT, entity.getOrderId());
+
+                request.addBatchDataParam(ReparationDBField.IS_LOST, DataType.INT, entity.getIsLost());
+                request.addBatchDataParam(ReparationDBField.IS_CONFIRMED, DataType.BOOLEAN, entity.getIsConfirmed());
+                request.addBatchDataParam(ReparationDBField.REPARATION_DATE, DataType.TIMESTAMP, entity.getReparationDate());
+                request.addBatchDataParam(ReparationDBField.REPARATION_BY, DataType.INT, entity.getReparationBy());
+                request.addBatchDataParam(ReparationDBField.REPARATION_TOTAL_AMOUNT, DataType.DOUBLE, entity.getReparationTotalAmount());
+                request.addBatchDataParam(ReparationDBField.REPARATED_AMOUNT, DataType.DOUBLE, entity.getReparatedAmount());
+                request.addBatchDataParam(ReparationDBField.IS_REPARATED, DataType.BOOLEAN, entity.getIsReparated());
+                request.addBatchDataParam(ReparationDBField.REMARK, DataType.STRING, entity.getRemark());
+                request.addBatchDataParam(ReparationDBField.CONFIRMED_DATE, DataType.TIMESTAMP, entity.getConfirmedDate());
+                request.addBatchDataParam(ReparationDBField.CONFIRMED_BY, DataType.INT, entity.getConfirmedBy());
+                request.addBatchDataParam(ReparationDBField.REPARAT_METHOD, DataType.STRING, entity.getReparatMethod());
+                request.addBatchDataParam(ReparationDBField.REPARAT_DETAILS, DataType.STRING, entity.getReparatDetails());
+                request.addBatchDataParam(ReparationDBField.REPARAT_STATUS, DataType.INT, entity.getReparatStatus());
+                request.addBatchDataParam(ReparationDBField.IMPORT_COUNT, DataType.INT, entity.getImportCount());
+                request.addBatchDataParam(ReparationDBField.LOGISTICS_COMPANY, DataType.STRING, entity.getLogisticsCompany());
+                request.addBatch();
+            }
+            SqlerTemplate.batchUpdate(request);
+        }
+    }
+
+    @Override
+    public void deleteReparation(Integer primaryKey)
+    {
+        Assert.notNull(primaryKey, AssertConstants.NOT_NULL_MSG);
+        SqlerRequest request = new SqlerRequest("deleteReparationByPrimaryKey");
+        request.addDataParam(ReparationDBField.REPARATION_ID, DataType.INT, primaryKey);
+        SqlerTemplate.execute(request);
+    }
+}

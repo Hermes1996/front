@@ -15,10 +15,15 @@ public class NewTime{
 		Timestamp now= new Timestamp(System.currentTimeMillis());
 		System.out.println(now);
 
+		//转LocalDateTime
+		System.out.println(now.toLocalDateTime());
+
 		//LocalDate直接获取当月天数
 		LocalDate date = LocalDate.now();	//java8 生成当地时间-年月日
 		System.out.println(date);
 		int dayOfMonth = date.getDayOfMonth();
+		// 修改月份
+		LocalDate localDate1 = date.withMonth(1);
 
 		//date表示的一周中的第几天
 		Date today = new Date();//生成现在时间-年月日时分秒带星期；new Date()调用System.currentTimeMillis()[毫秒数]

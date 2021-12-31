@@ -1,0 +1,44 @@
+package com.bessky.erp.warehouse.reparation.dao.mapper;
+
+import com.bessky.erp.warehouse.reparation.bean.Reparation;
+import com.bessky.erp.warehouse.reparation.bean.ReparationItem;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
+
+public class ReparationAndItemMapper extends ReparationMapper
+{
+    private Map<Integer, Reparation> reparationMap = new HashMap<>();
+
+    public Reparation mapRow(ResultSet rs, int rowNum) throws SQLException
+    {
+        int orderId = rs.getInt("order_id");
+        Reparation reparation = reparationMap.get(orderId);
+
+        boolean isExist = false;
+        if (reparation == null)
+        {
+            reparation = super.mapRow(rs, rowNum);
+            reparationMap.put(orderId, reparation);
+        }
+        else
+        {
+            isExist = true;
+        }
+
+        ReparationItem reparationItem = new ReparationItem();
+        reparationItem.setId(rs.getInt("id"));
+        reparationItem.setOrderId(rs.getInt("order_id"));
+        reparationItem.setReparationAmount(rs.getDouble("reparation_amount"));
+        reparationItem.setReparationMethod(rs.getString("reparation_method"));
+        reparationItem.setReparationDetail(rs.getString("reparation_detail"));
+        reparationItem.setLogisticCompany(rs.getString("logistic_company"));
+        reparationItem.setCreateBy(rs.getInt("create_by"));
+        reparationItem.setCreateTime(rs.getTimestamp("create_time").toLocalDateTime());
+
+        reparation.getReparationItems().add(reparationItem);
+
+        return isExist ? null :reparation;
+    }
+}

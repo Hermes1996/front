@@ -1,0 +1,604 @@
+/*
+ * 文件名：SqlerTemplate.java
+ * 版权：Copyright 2012-2014 Li Huaxin Tech. Co. Ltd. All Rights Reserved. 
+ * 描述： SqlerTemplate.java
+ * 修改人：lihuaxin
+ * 修改时间：2014年6月28日
+ * 修改内容：新增
+ */
+package com.bessky.erp.foundation.sqler.template;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.sql.DataSource;
+
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.SingleColumnRowMapper;
+import org.springframework.jdbc.core.SqlTypeValue;
+import org.springframework.jdbc.core.StatementCreatorUtils;
+import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.JdbcUtils;
+import org.springframework.jdbc.support.KeyHolder;
+
+import com.alibaba.druid.sql.SQLUtils;
+import com.bessky.erp.foundation.sqler.SqlerException;
+import com.bessky.erp.foundation.sqler.SqlerRequest;
+import com.bessky.erp.foundation.sqler.analyzer.AnalyzeResult;
+import com.bessky.erp.foundation.sqler.analyzer.SqlerAnalyzerHelper;
+import com.bessky.erp.starter.core.readwrite.DataSourceChoose;
+import com.bessky.erp.starter.core.readwrite.DataSourceContextHolder;
+
+/**
+ * 执行Sqler工具类
+ * 
+ * 
+ * @author lihuaxin
+ * @version LMS V100R001 2014年6月28日
+ * @since LMS V100R001C00
+ */
+public class SqlerTemplate
+{
+    /**
+     * Logger for this class
+     */
+    private static final Logger logger = LoggerFactory.getLogger(SqlerTemplate.class);
+
+    /**
+     * master数据源
+     */
+    private static JdbcTemplate jdbcTemplate;
+
+    /**
+     * slave数据源
+     */
+    private static JdbcTemplate slaveJdbcTemplate;
+
+    /**
+     * seller数据源
+     */
+    private static JdbcTemplate sellerJdbcTemplate;
+
+    /**
+     * seller1数据源
+     */
+    private static JdbcTemplate seller1JdbcTemplate;
+
+    /**
+     * 历史数据源
+     */
+    private static JdbcTemplate historyJdbcTemplate;
+    
+    /**
+     * 华为数据源
+     */
+    private static JdbcTemplate dwsJdbcTemplate;
+
+    /**
+     * PII数据源
+     */
+    private static JdbcTemplate piiJdbcTemplate;
+
+    public static <T> List<T> query(SqlerRequest request, RowMapper<T> rowMapper)
+    {
+        AnalyzeResult analyzeResult = SqlerAnalyzerHelper.doAnalyzePreNMSQL(request);
+
+        String sql = analyzeResult.getAnalyzedSQL();
+
+        // 监控大数据查询
+        // warnBigDataQuery(sql);
+        logger.debug("SQL=[{}], {}, PARAM={}", request.getCmdValue(), SQLUtils.formatMySql(sql), StringUtils.join(analyzeResult.getArgs(), ","));
+
+        try
+        {
+            long start = 0;
+            if (logger.isDebugEnabled())
+            {
+                start = System.currentTimeMillis();
+            }
+
+            List<T> query = getJdbcTemplate().query(sql, analyzeResult.getArgs(), analyzeResult.getArgTypes(), new SqlerResultSetExtractor<T>(rowMapper));
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Time " + (System.currentTimeMillis() - start) + "ms");
+            }
+
+            if (logger.isWarnEnabled() && query != null && query.size() > 100000)
+            {
+                Throwable t = new Throwable();
+
+                StringWriter sw = new StringWriter();
+                PrintWriter pw = new PrintWriter(sw);
+                t.printStackTrace(pw);
+                String s = sw.toString();
+                sw.getBuffer().setLength(0);
+                
+                logger.warn("############BIG DATA QUERY************ | SQL={}, Exception={}, SIZE={}", request.getCmdValue(), s, String.valueOf(query.size()));
+            }
+
+            return query;
+        }
+        catch (DataAccessException e)
+        {
+            logger.error("query(SqlerRequest, RowMapper<T>)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 查询当个对象
+     * 
+     * 
+     * @param request
+     * @param rowMapper
+     * @return T
+     */
+    public static <T> T queryForObject(SqlerRequest request, RowMapper<T> rowMapper)
+    {
+        List<T> list = null;
+        try
+        {
+            // 查询单个不能排序
+            request.setOrderType(null);
+            list = query(request, rowMapper);
+        }
+        catch (DataAccessException e)
+        {
+            logger.error("queryForObject(SqlerRequest, RowMapper<T>)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+
+        if (list != null && !list.isEmpty())
+        {
+            if (list.size() > 1)
+            {
+                throw new SqlerException("expect 1, " + "actual " + list.size());
+            }
+
+            return list.get(0);
+        }
+
+        return null;
+
+    }
+
+    public static int queryForInt(SqlerRequest request)
+    {
+        try
+        {
+            Integer number = queryForObject(request, new SingleColumnRowMapper<Integer>(Integer.class));
+            return number == null ? 0 : number.intValue();
+
+        }
+        catch (DataAccessException e)
+        {
+            logger.error("queryForInt(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+    }
+
+    public static double queryForDouble(SqlerRequest request)
+    {
+        try
+        {
+            Double number = queryForObject(request, new SingleColumnRowMapper<Double>(Double.class));
+            return number == null ? 0.0 : number.doubleValue();
+
+        }
+        catch (DataAccessException e)
+        {
+            logger.error("queryForDouble(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 
+     * <b>The query is expected to be a single row query; the result row will be mapped to a Map (one entry for each column, using the column name as the key).</b>
+     * <p>
+     * <p>
+     * @param request
+     * @return Map<String,Object>
+     */
+    public static Map<String, Object> queryForMap(SqlerRequest request)
+    {
+        AnalyzeResult analyzeResult = SqlerAnalyzerHelper.doAnalyzePreNMSQL(request);
+
+        String sql = analyzeResult.getAnalyzedSQL();
+
+        logger.debug("SQL=[{}], {}, PARAM={}", request.getCmdValue(), SQLUtils.formatMySql(sql), StringUtils.join(analyzeResult.getArgs(), ","));
+        
+        long start = 0;
+        if (logger.isDebugEnabled())
+        {
+            start = System.currentTimeMillis();
+        }
+
+        try
+        {
+            Map<String, Object> queryForMap = getJdbcTemplate().queryForMap(sql, analyzeResult.getArgs(), analyzeResult.getArgTypes());
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Time " + (System.currentTimeMillis() - start) + "ms");
+            }
+
+            return queryForMap;
+
+        }
+        catch (DataAccessException e)
+        {
+            logger.error("queryForMap(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+    }
+
+    public static List<Map<String, Object>> queryForList(SqlerRequest request)
+    {
+        AnalyzeResult analyzeResult = SqlerAnalyzerHelper.doAnalyzePreNMSQL(request);
+
+        String sql = analyzeResult.getAnalyzedSQL();
+
+        logger.debug("SQL=[{}], {}, PARAM={}", request.getCmdValue(), SQLUtils.formatMySql(sql), StringUtils.join(analyzeResult.getArgs(), ","));
+        
+        long start = 0;
+        if (logger.isDebugEnabled())
+        {
+            start = System.currentTimeMillis();
+        }
+
+        try
+        {
+            List<Map<String, Object>> queryForList = getJdbcTemplate().queryForList(sql, analyzeResult.getArgs(), analyzeResult.getArgTypes());
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Time " + (System.currentTimeMillis() - start) + "ms");
+            }
+
+            return queryForList;
+        }
+        catch (DataAccessException e)
+        {
+            logger.error("queryForList(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+    }
+
+    public static int execute(SqlerRequest request)
+    {
+        AnalyzeResult analyzeResult = SqlerAnalyzerHelper.doAnalyzePreNMSQL(request);
+
+        String sql = analyzeResult.getAnalyzedSQL();
+
+        logger.debug("SQL=[{}], {}, PARAM={}", request.getCmdValue(), SQLUtils.formatMySql(sql), StringUtils.join(analyzeResult.getArgs(), ","));
+        
+        long start = 0;
+        if (logger.isDebugEnabled())
+        {
+            start = System.currentTimeMillis();
+        }
+
+        try
+        {
+            int executeCount = getJdbcTemplate().update(sql, analyzeResult.getArgs(), analyzeResult.getArgTypes());
+
+            if (logger.isDebugEnabled())
+            {
+                logger.debug("Time " + (System.currentTimeMillis() - start) + "ms");
+            }
+
+            return executeCount;
+        }
+        catch (DataAccessException e)
+        {
+            logger.error("execute(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+        catch (Exception e)
+        {
+            logger.error("execute(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 
+     * <b>执行SQL，并返回自动增长id</b>
+     * <p>
+     * <p>
+     * @param request
+     * @return Integer 返回自动增长id
+     */
+    public static Integer executeAndReturn(SqlerRequest request)
+    {
+        final AnalyzeResult analyzeResult = SqlerAnalyzerHelper.doAnalyzePreNMSQL(request);
+
+        final String sql = analyzeResult.getAnalyzedSQL();
+
+        logger.debug("SQL=[{}], {}, PARAM={}", request.getCmdValue(), SQLUtils.formatMySql(sql), StringUtils.join(analyzeResult.getArgs(), ","));
+        
+        try
+        {
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            getJdbcTemplate().update(new PreparedStatementCreator()
+            {
+
+                @Override
+                public PreparedStatement createPreparedStatement(Connection connection) throws SQLException
+                {
+                    PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
+                    Object[] args = analyzeResult.getArgs();
+                    int[] argTypes = analyzeResult.getArgTypes();
+
+                    int parameterPosition = 1;
+                    if (args != null)
+                    {
+                        for (int i = 0; i < args.length; i++)
+                        {
+                            Object arg = args[i];
+                            StatementCreatorUtils.setParameterValue(ps, parameterPosition, argTypes[i], arg);
+                            parameterPosition++;
+
+                        }
+                    }
+
+                    return ps;
+                }
+
+            }, keyHolder);
+
+            Number key = keyHolder.getKey();
+            return key != null ? key.intValue() : 0;
+        }
+        catch (DataAccessException e)
+        {
+            logger.error("executeAndReturn(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+        catch (Exception e)
+        {
+            logger.error("execute(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+    }
+
+    public static int[] batchUpdate(SqlerRequest request)
+    {
+
+        AnalyzeResult analyzeResult = SqlerAnalyzerHelper.doAnalyzePreNMSQL(request);
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("SQL=[" + request.getCmdValue() + "]" + SQLUtils.formatMySql(analyzeResult.getAnalyzedSQL()));
+        }
+
+        try
+        {
+            return getJdbcTemplate().batchUpdate(analyzeResult.getAnalyzedSQL(), analyzeResult.getBatchArgs(), analyzeResult.getArgTypes());
+        }
+        catch (DataAccessException e)
+        {
+            logger.error("batchUpdate(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+        catch (Exception e)
+        {
+            logger.error("execute(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 批量创建并返回创建后的自动增长ID
+     * 
+     * <p></p>
+     * @param request
+     * @return
+     * List<Integer> 自动增长ID
+     */
+    public static List<Integer> batchInsertAndReturn(SqlerRequest request)
+    {
+        AnalyzeResult analyzeResult = SqlerAnalyzerHelper.doAnalyzePreNMSQL(request);
+
+        String sql = analyzeResult.getAnalyzedSQL();
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("SQL=[" + request.getCmdValue() + "]" + SQLUtils.formatMySql(sql));
+        }
+
+        long start = 0;
+        if (logger.isDebugEnabled())
+        {
+            start = System.currentTimeMillis();
+        }
+
+        try
+        {
+            DataSource dataSource = jdbcTemplate.getDataSource();
+            Connection con = DataSourceUtils.getConnection(dataSource);
+            PreparedStatement ps = null;
+            try
+            {
+                ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+                List<Object[]> batchArgs = analyzeResult.getBatchArgs();
+                if (batchArgs != null)
+                {
+                    int batchSize = request.getBatchCount();
+                    int[] columnTypes = analyzeResult.getArgTypes();
+
+                    for (int i = 0; i < batchSize; i++)
+                    {
+                        Object[] values = batchArgs.get(i);
+                        int colIndex = 0;
+                        for (Object value : values)
+                        {
+                            colIndex++;
+                            if (columnTypes == null || colIndex > columnTypes.length)
+                            {
+                                StatementCreatorUtils.setParameterValue(ps, colIndex, SqlTypeValue.TYPE_UNKNOWN, value);
+                            }
+                            else
+                            {
+                                StatementCreatorUtils.setParameterValue(ps, colIndex, columnTypes[colIndex - 1], value);
+                            }
+                        }
+
+                        ps.addBatch();
+                    }
+                }
+
+                ps.executeBatch();
+
+                ResultSet generatedKeys = ps.getGeneratedKeys();
+                List<Integer> list = new ArrayList<Integer>();
+                while (generatedKeys.next())
+                {
+                    list.add(generatedKeys.getInt(1));
+                }
+
+                if (logger.isDebugEnabled())
+                {
+                    logger.debug("SQL=[" + request.getCmdValue() + "] Time " + (System.currentTimeMillis() - start) + "ms");
+                }
+
+                return list;
+            }
+            catch (SQLException ex)
+            {
+
+                JdbcUtils.closeStatement(ps);
+                ps = null;
+                DataSourceUtils.releaseConnection(con, dataSource);
+                con = null;
+                throw ex;
+            }
+            finally
+            {
+                JdbcUtils.closeStatement(ps);
+                DataSourceUtils.releaseConnection(con, dataSource);
+            }
+        }
+        catch (DataAccessException e)
+        {
+            logger.error("batchUpdate(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+        catch (Exception e)
+        {
+            logger.error("execute(SqlerRequest)", e); //$NON-NLS-1$
+
+            throw new SqlerException(e.getMessage(), e);
+        }
+    }
+
+    public static void setJdbcTemplate(JdbcTemplate jdbcTemplate)
+    {
+        SqlerTemplate.jdbcTemplate = jdbcTemplate;
+    }
+
+    public static void setSlaveJdbcTemplate(JdbcTemplate jdbcTemplate)
+    {
+        SqlerTemplate.slaveJdbcTemplate = jdbcTemplate;
+    }
+
+    public static void setSellerJdbcTemplate(JdbcTemplate jdbcTemplate)
+    {
+        SqlerTemplate.sellerJdbcTemplate = jdbcTemplate;
+    }
+
+    public static void setSeller1JdbcTemplate(JdbcTemplate jdbcTemplate)
+    {
+        SqlerTemplate.seller1JdbcTemplate = jdbcTemplate;
+    }
+
+    public static void setHistoryJdbcTemplate(JdbcTemplate jdbcTemplate)
+    {
+        SqlerTemplate.historyJdbcTemplate = jdbcTemplate;
+    }
+
+    public static void setDwsJdbcTemplate(JdbcTemplate jdbcTemplate)
+    {
+        SqlerTemplate.dwsJdbcTemplate = jdbcTemplate;
+    }
+
+    public static void setPiiJdbcTemplate(JdbcTemplate jdbcTemplate)
+    {
+        SqlerTemplate.piiJdbcTemplate = jdbcTemplate;
+    }
+
+    /**
+     * 返回读写数据源
+     * 
+     * 
+     * @return
+     * JdbcTemplate
+     */
+    private static JdbcTemplate getJdbcTemplate()
+    {
+        String dataSource = DataSourceContextHolder.getDataSource();
+
+        if (dataSource != null && DataSourceChoose.slave.equals(dataSource))
+        {
+            return slaveJdbcTemplate != null ? slaveJdbcTemplate : jdbcTemplate;
+        }
+
+        if (dataSource != null && DataSourceChoose.seller.equals(dataSource))
+        {
+            return sellerJdbcTemplate != null ? sellerJdbcTemplate : jdbcTemplate;
+        }
+
+        if (dataSource != null && DataSourceChoose.seller1.equals(dataSource))
+        {
+            return seller1JdbcTemplate != null ? seller1JdbcTemplate : jdbcTemplate;
+        }
+
+        if (dataSource != null && DataSourceChoose.history.equals(dataSource))
+        {
+            return historyJdbcTemplate != null ? historyJdbcTemplate : jdbcTemplate;
+        }
+
+        if (dataSource != null && DataSourceChoose.dws.equals(dataSource))
+        {
+            return dwsJdbcTemplate != null ? dwsJdbcTemplate : jdbcTemplate;
+        }
+
+        if (dataSource != null && DataSourceChoose.pii.equals(dataSource))
+        {
+            return piiJdbcTemplate != null ? piiJdbcTemplate : jdbcTemplate;
+        }
+
+        return jdbcTemplate;
+    }
+}

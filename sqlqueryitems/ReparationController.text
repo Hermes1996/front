@@ -1,0 +1,431 @@
+package com.bessky.pss.portal.business.reparation.action;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+import com.bessky.erp.track.bean.StableOrderTrack;
+import com.bessky.erp.track.bean.StableOrderTrackQueryCondition;
+import com.bessky.erp.track.facade.StableOrderTrackFacade;
+import com.bessky.erp.warehouse.reparation.bean.ReparationItem;
+import com.bessky.pss.portal.business.logistics.common.TrackStatus;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.BooleanUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.bessky.erp.core.common.bean.Pager;
+import com.bessky.erp.core.common.dto.QueryListDTO;
+import com.bessky.erp.warehouse.reparation.bean.Reparation;
+import com.bessky.erp.warehouse.reparation.bean.ReparationQueryCondition;
+import com.bessky.history.order.entity.OrderCustom;
+import com.bessky.platform.component.StatusCode;
+import com.bessky.platform.context.DataContextHolder;
+import com.bessky.platform.json.ResponseError;
+import com.bessky.platform.json.ResponseJson;
+import com.bessky.platform.log.Log;
+import com.bessky.platform.log.LogFactory;
+import com.bessky.platform.rbac.permission.PermissionAnnotation;
+import com.bessky.pss.common.cache.utils.DictionaryCacheUtils;
+import com.bessky.pss.common.dict.ExportType;
+import com.bessky.pss.common.dict.LostStatus;
+import com.bessky.pss.common.dict.YesOrNo;
+import com.bessky.pss.common.log.PortalLog;
+import com.bessky.pss.common.log.PortalLogFactory;
+import com.bessky.pss.common.resouces.ModuleName;
+import com.bessky.pss.common.resouces.SessionKeyConstants;
+import com.bessky.pss.common.util.CommonUtils;
+import com.bessky.pss.common.util.ExcelUtils;
+import com.bessky.pss.portal.business.order.bean.Order;
+import com.bessky.pss.portal.business.order.bean.OrderItem;
+import com.bessky.pss.portal.business.order.bean.OrderQueryCondition;
+import com.bessky.pss.portal.business.order.common.OrderShippingStatus;
+import com.bessky.pss.portal.business.order.common.OrderStatus;
+import com.bessky.pss.portal.business.order.service.OrderService;
+import com.bessky.pss.portal.business.reparation.common.ReparatStatus;
+import com.bessky.pss.portal.business.reparation.common.ReparationImportErrorInfo;
+import com.bessky.pss.portal.business.reparation.domain.ReparationDo;
+import com.bessky.pss.portal.business.reparation.utils.ReparationExportUtils;
+import com.google.common.collect.Lists;
+
+/**
+ *
+ *  物流赔款流程
+ *  
+ * @Author: lijinghua
+ * @version: Bessky V100R001 2018/8/16 10:51
+ * @since  Bessky V100R001C00
+*/
+@Controller
+@RequestMapping("reparations")
+public class ReparationController extends AbstractReparationController
+{
+    private static final Log logger = LogFactory.getLog(ReparationController.class);
+
+    private static final PortalLog PORTAL_LOGGER = PortalLogFactory.getLog(ModuleName.REPARATION);
+
+    @Resource
+    private OrderService orderService;
+
+    @Resource
+    private com.bessky.history.order.service.OrderService rpcOrderService;
+
+    @Resource
+    private StableOrderTrackFacade stableOrderTrackFacade;
+
+    /**
+     *
+     * 初始化界面
+     *
+     * @param domain
+     * @return
+     */
+    @PermissionAnnotation(permission = "16111900")
+    @RequestMapping(method = {RequestMethod.GET})
+    public String init(@ModelAttribute("domain") ReparationDo domain)
+    {
+        initFormData(domain);
+
+        return "reparation/reparation_list";
+    }
+
+    /**
+     *
+     * 查询赔款信息
+     *
+     * @param domain
+     * @return
+     */
+    @RequestMapping(value = "search", method = {RequestMethod.POST})
+    public String search(@ModelAttribute("domain") ReparationDo domain)
+    {
+        initFormData(domain);
+        queryReparations(domain);
+
+        // 查询订单
+        List<Integer> orderIds = domain.getReparations().stream().map(a -> a.getOrderId()).collect(Collectors.toList());
+        if (CollectionUtils.isNotEmpty(orderIds))
+        {
+            List<Order> orders = orderService.queryOrdersByIds(orderIds);
+
+            List<Integer> hasOrderIds = orders.stream().map(a -> a.getOrderId()).collect(Collectors.toList());
+            List<Integer> notOrderIds = orderIds.stream().filter(a -> !hasOrderIds.contains(a)).collect(Collectors.toList());
+
+            // 从历史订单中获取
+            List<Order> historyOrder = getHistoryOrder(notOrderIds);
+            orders.addAll(historyOrder);
+
+            Map<Integer, Order> orderMap = orders.stream().collect(Collectors.toMap(Order::getOrderId, a -> a, (k1, k2) -> k1));
+            domain.setOrderMap(orderMap);
+        }
+
+        return "reparation/reparation_list";
+    }
+
+    /**
+     *
+     * 赔款明细导入功能
+     *
+     * @param domain
+     * @param multiPartFile
+     * @return
+     */
+    @RequestMapping(value = "to/supplement/reparation/import", method = {RequestMethod.GET})
+    public String toSupplementReparations(@ModelAttribute("domain") ReparationDo domain)
+    {
+        return "reparation/supplement_reparation_import";
+    }
+
+    /**
+     *
+     * 赔款明细导入
+     *
+     * @param domain
+     * @param importFile
+     * @return
+     */
+    @RequestMapping(value = "supplement/reparation/import", method = {RequestMethod.POST})
+    @ResponseBody
+    public ResponseJson supplementReparations(@ModelAttribute("domain") ReparationDo domain, @RequestParam("file") MultipartFile importFile)
+    {
+        ResponseJson response = new ResponseJson();
+        response.setStatus(StatusCode.FAIL);
+        if (importFile == null)
+        {
+            response.setMessage(ReparationImportErrorInfo.FILE_NOT_FOUND);
+            return response;
+        }
+        try
+        {
+            InputStream inputStream = importFile.getInputStream();
+            Workbook workbook = ExcelUtils.readExcel(inputStream);
+            Sheet sheet = null;
+            if (workbook != null)
+            {
+                sheet = workbook.getSheetAt(0);
+            }
+            if (sheet == null)
+            {
+                response.setMessage(ReparationImportErrorInfo.FILE_NOT_FOUND);
+                return response;
+            }
+
+            List<Reparation> updateReparations = new ArrayList<>();
+            List<ReparationItem> createReparationItems = new ArrayList<>();
+            int lastRowNum = sheet.getLastRowNum();
+            Row row = null;
+            for (int rowNum = 1; rowNum <= lastRowNum; rowNum++)
+            {
+                int cellNum = 0;
+                row = sheet.getRow(rowNum);
+
+                // 订单号
+                Cell orderIdCell = row.getCell(cellNum++);
+                Integer orderId = ExcelUtils.getIntegerCellValue(orderIdCell);
+
+                //跟踪号
+                Cell trackingNumberCell = row.getCell(cellNum++);
+                String trackingNumber = ExcelUtils.getStringCellValue(trackingNumberCell);
+                if (orderId == null && StringUtils.isBlank(trackingNumber))
+                {
+                    response.addError(new ResponseError(String.valueOf(row.getRowNum() + 1), ReparationImportErrorInfo.ORDER_ID_AND_TRACKING_NUMBER_MISS, ReparationImportErrorInfo.ORDER_ID_AND_TRACKING_NUMBER_MISS));
+                    continue;
+                }
+
+                if (orderId == null)
+                {
+                    OrderQueryCondition query = new OrderQueryCondition();
+                    query.setTrackingNumber(trackingNumber);
+
+                    List<Order> orders = orderService.queryOrders(query, null);
+
+                    if (CollectionUtils.isEmpty(orders))
+                    {
+                        response.addError(new ResponseError(String.valueOf(row.getRowNum() + 1), "跟踪号不存在", "跟踪号不存在"));
+                        continue;
+                    }
+
+                    for (Order order : orders)
+                    {
+                        orderId = order.getOrderId();
+                    }
+                }
+
+                // 先调用接口查询是否存在订单
+                Reparation reparation = reparationFacade.getReparationByOrderId(orderId);
+                if (reparation == null)
+                {
+                    response.addError(new ResponseError(String.valueOf(row.getRowNum() + 1), ReparationImportErrorInfo.ORDER_NOT_EXISTED, ReparationImportErrorInfo.ORDER_NOT_EXISTED));
+                    continue;
+                }
+
+                // 是否已赔款
+                Cell isReparationedCell = row.getCell(cellNum++);
+                String isReparationed = ExcelUtils.getStringCellValue(isReparationedCell);
+                if (StringUtils.equalsIgnoreCase(isReparationed, YesOrNo.YES.display()))
+                {
+                    reparation.setIsReparated(true);
+                    // 是， 状态是财务审核
+                    reparation.setReparatStatus(ReparatStatus.FINANCIAL_AUDIT.intCode());
+                }
+                else
+                {
+                    // 否， 状态是待确认
+                    reparation.setReparatStatus(ReparatStatus.UNCONFIRM.intCode());
+                    reparation.setIsReparated(false);
+                }
+
+                ReparationItem reparationItem = new ReparationItem();
+                reparationItem.setOrderId(reparation.getOrderId());
+
+                // 第一次为赔偿金额，第二次后为调整赔款金额
+                Cell reparationAmountCell = row.getCell(cellNum++);
+                Double reparationAmount = ExcelUtils.getDoubleCellValue(reparationAmountCell);
+                if (reparationAmount == null)
+                {
+                    response.addError(new ResponseError(String.valueOf(row.getRowNum() + 1), ReparationImportErrorInfo.REPARATIONED_AMOUNT_MISS,
+                            ReparationImportErrorInfo.REPARATIONED_AMOUNT_MISS));
+                    continue;
+                }
+                else
+                {
+                    // 赔款表记录最终赔款金额，赔款明细表记录赔偿金额和调整赔偿金额
+                    Double firstReparationAmount = Optional.ofNullable(reparation.getReparatedAmount()).orElse(0.0);
+                    reparation.setReparatedAmount(firstReparationAmount + reparationAmount);
+                    reparationItem.setReparationAmount(reparationAmount);
+                }
+
+                // 赔偿方式， 是否已赔款为否， 不必填
+                Cell reparaMethodCell = row.getCell(cellNum++);
+                String reparaMethodValue = ExcelUtils.getCellTrimValue(reparaMethodCell);
+                List<String> allowReparaMethod = Arrays.asList("返银行", "抵运费");
+                if (!allowReparaMethod.contains(reparaMethodValue) && reparation.getIsReparated())
+                {
+                    response.addError(new ResponseError(String.valueOf(row.getRowNum() + 1), "数据错误", "赔偿方式只能是 返银行 或 抵运费"));
+                    continue;
+                }
+                reparation.setReparatMethod(reparaMethodValue);
+                reparationItem.setReparationMethod(reparaMethodValue);
+
+                // 物流商， 不必填
+                Cell logisticsCompanyCell = row.getCell(cellNum++);
+                String logisticsCompanyValue = ExcelUtils.getCellTrimValue(logisticsCompanyCell);
+                reparation.setLogisticsCompany("无");
+                if (StringUtils.isNotBlank(logisticsCompanyValue))
+                {
+                    reparation.setLogisticsCompany(logisticsCompanyValue);
+                    reparationItem.setLogisticCompany(logisticsCompanyValue);
+                }
+
+                // 赔偿详情， 是否已赔款为否， 不必填
+                Cell reparaDetailsCell = row.getCell(cellNum++);
+                String reparaDetailsValue = ExcelUtils.getCellTrimValue(reparaDetailsCell);
+                if (StringUtils.isBlank(reparaDetailsValue) && reparation.getIsReparated())
+                {
+                    response.addError(new ResponseError(String.valueOf(row.getRowNum() + 1), "数据错误", "赔偿详情不能为空"));
+                    continue;
+                }
+                reparation.setReparatDetails(reparaDetailsValue);
+                reparationItem.setReparationDetail(reparaDetailsValue);
+
+                reparation.setReparationDate(new Timestamp(System.currentTimeMillis()));
+                reparationItem.setCreateTime(LocalDateTime.now());
+                reparation.setReparationBy(DataContextHolder.getUserId());
+                reparationItem.setCreateBy(DataContextHolder.getUserId());
+
+                // 导入次数自增
+                reparation.setImportCount(reparation.getImportCount() + 1);
+
+                updateReparations.add(reparation);
+                createReparationItems.add(reparationItem);
+
+                PORTAL_LOGGER.log(reparation.getReparationId(), "导入赔款详情");
+            }
+
+            if (CollectionUtils.isEmpty(response.getErrors()))
+            {
+                reparationFacade.batchUpdateReparation(updateReparations);
+                reparationFacade.batchCreateReparationItem(createReparationItems);
+                response.setStatus(StatusCode.SUCCESS);
+            }
+        }
+        catch (IOException e)
+        {
+            logger.error(e.getMessage(), e);
+        }
+
+        return response;
+    }
+
+    /**
+     *
+     * 赔款数据导出
+     *
+     * @param reparationDo
+     * @param reparationIds
+     * @param exportType
+     * @param response
+     * @return
+     */
+    @RequestMapping(value = "export", method = {RequestMethod.POST})
+    public void exportExcel(@ModelAttribute("domain") ReparationDo reparationDo, @RequestParam(value = "ids", required = false) List<Integer> reparationIds,
+            @RequestParam(value = "exportType") String exportType, HttpServletResponse response)
+    {
+        List<Reparation> reparations = null;
+
+        QueryListDTO<Reparation> reparationQueryListDTO = null;
+
+        ReparationQueryCondition query = reparationDo.getQuery();
+
+        // 查询赔款明细
+        query.setQueryReparationItems(true);
+
+        ExportType exportTypeEnum = ExportType.build(exportType);
+
+        switch (exportTypeEnum)
+        {
+            case ALL:
+                reparationQueryListDTO = reparationFacade.queryReparationList(query, null);
+                reparations = reparationQueryListDTO.getList();
+                break;
+            case PAGE:
+                Pager pager = reparationDo.getPage();
+                reparationQueryListDTO = reparationFacade.queryReparationList(query, pager);
+                reparations = reparationQueryListDTO.getList();
+                break;
+            case CHECKED:
+                query = new ReparationQueryCondition();
+                query.setReparationIds(reparationIds);
+                query.setQueryReparationItems(true);
+                reparationQueryListDTO = reparationFacade.queryReparationList(query, null);
+                reparations = reparationQueryListDTO.getList();
+                break;
+            default:
+            break;
+        }
+
+        String newfilename = CommonUtils.newFileNameByTime("reparation.xlsx");
+
+        if (CollectionUtils.isNotEmpty(reparations))
+        {
+            // 查询订单
+            List<Order> orders = new ArrayList<>();
+            List<Integer> orderIds = reparations.stream().map(a -> a.getOrderId()).collect(Collectors.toList());
+            List<List<Integer>> partition = Lists.partition(orderIds, 2000);
+            for (List<Integer> subOrderIds : partition)
+            {
+                List<Order> subOrders = orderService.queryOrdersByIds(subOrderIds);
+                orders.addAll(subOrders);
+            }
+
+            List<Integer> hasOrderIds = orders.stream().map(a -> a.getOrderId()).collect(Collectors.toList());
+            List<Integer> notOrderIds = orderIds.stream().filter(a -> !hasOrderIds.contains(a)).collect(Collectors.toList());
+
+            // 从历史订单中获取
+            List<Order> historyOrder = getHistoryOrder(notOrderIds);
+            orders.addAll(historyOrder);
+            
+            OutputStream outputStream = null;
+            try
+            {
+                response.setHeader("Content-Disposition", "attachment; filename=" + newfilename);
+                response.setHeader("Set-Cookie", "fileDownload=true; path=/");
+                response.setContentType("application/vnd.ms-excel; charset=utf-8");
+
+                outputStream = response.getOutputStream();
+                ReparationExportUtils.exportReparations(reparations, orders, outputStream);
+            }
+            catch (IOException e)
+            {
+                logger.error(e.getMessage(), e);
+            }
+            finally
+            {
+                IOUtils.closeQuietly(outputStream);
+            }
+        }
+    }
+
+}

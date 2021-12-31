@@ -1,0 +1,416 @@
+package com.bessky.pss.portal.business.reparation.utils;
+
+import cn.hutool.core.collection.CollectionUtil;
+import com.bessky.erp.system.logistics.bean.TransportationMode;
+import com.bessky.erp.warehouse.reparation.bean.Reparation;
+import com.bessky.erp.warehouse.reparation.bean.ReparationItem;
+import com.bessky.logistic.system.country.entity.Country;
+import com.bessky.platform.log.Log;
+import com.bessky.platform.log.LogFactory;
+import com.bessky.pss.common.cache.SystemCacheQuerier;
+import com.bessky.pss.common.cache.utils.TransportationModeCacheUtils;
+import com.bessky.pss.common.dict.LostStatus;
+import com.bessky.pss.common.dict.Platform;
+import com.bessky.pss.common.util.CommonUtils;
+import com.bessky.pss.common.util.DateUtils;
+import com.bessky.pss.common.util.OrderDepartmentUtils;
+import com.bessky.pss.common.util.PageNameUtils;
+import com.bessky.pss.portal.business.order.bean.Order;
+import com.bessky.pss.seller.amazon.bill.common.AmazonSite;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.poi.xssf.usermodel.*;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
+
+public class ReparationExportUtils
+{
+    private static final Log logger = LogFactory.getLog(ReparationExportUtils.class);
+
+    public static void exportReparations(List<Reparation> reparationList, List<Order> orders, OutputStream outputStream)
+    {
+        if (CollectionUtils.isEmpty(reparationList))
+        {
+            return;
+        }
+        
+        Map<Integer, Order> orderMap = orders.stream().collect(Collectors.toMap(Order::getOrderId, a -> a, (k1, k2) -> k1));
+        
+        String[] titles = new String[]{"订单号", "添加人", "添加时间", "跟踪号", "服务商号", "国家", "运输方式", "发货日期", "是否丢包", "原因描述", "应赔金额", "调整金额","调整赔偿时间", "最终已赔款金额", "是否已赔偿", "确认人", "赔偿时间", "审批人"};
+
+        XSSFWorkbook wb = new XSSFWorkbook();
+
+        // 自动换行
+        XSSFCellStyle cellStyle = wb.createCellStyle();
+        cellStyle.setWrapText(true);
+
+        XSSFSheet sheet = wb.createSheet("reparation");
+        // 设置单元格宽度
+        sheet.setColumnWidth(0, 10*256);
+        sheet.setColumnWidth(11, 22*256);
+        sheet.setColumnWidth(12, 42*256);
+        XSSFRow titleRow = sheet.createRow(0);
+        try
+        {
+
+            int titleRowNum = 0;
+            for (String title : titles)
+            {
+                XSSFCell cell = titleRow.createCell(titleRowNum);
+                cell.setCellValue(title);
+                titleRowNum++;
+            }
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+            // 表数据
+            int size = reparationList.size();
+            for (int rowNum = 0; rowNum < size; rowNum++)
+            {
+                XSSFRow row = sheet.createRow(rowNum + 1);
+                row.setHeightInPoints(20);
+                Reparation reparation = reparationList.get(rowNum);
+                Order order = orderMap.get(reparation.getOrderId());
+                int cellNum = 0;
+                // 订单号
+                XSSFCell orderCell = row.createCell(cellNum++);
+                orderCell.setCellValue(reparation.getOrderId());
+                // 工号
+                XSSFCell createByCell = row.createCell(cellNum++);
+                // 添加人姓名
+                Integer createdById = reparation.getCreatedBy();
+                String fullName = PageNameUtils.getFullName(createdById);
+                createByCell.setCellValue(fullName);
+                // 添加时间
+                XSSFCell createDateCell = row.createCell(cellNum++);
+                createDateCell.setCellValue(sdf.format(reparation.getCreationDate()));
+                // 订单跟踪号
+                XSSFCell trackCell = row.createCell(cellNum++);
+                String trackingNumber = Optional.ofNullable(reparation.getTrackingNumber())
+                        .filter(StringUtils::isNotBlank).orElse(order == null ? null : order.getTrackingNumber());
+                trackCell.setCellValue(trackingNumber);
+                // 服务商号
+                XSSFCell agentMailnoCell = row.createCell(cellNum++);
+                agentMailnoCell.setCellValue(reparation.getTrackingNumber());
+                // 国家
+                XSSFCell countryCell = row.createCell(cellNum++);
+                String buyerCountryCode = Optional.ofNullable(reparation.getBuyerCountryCode())
+                        .filter(StringUtils::isNotBlank).orElse(order == null ? null : order.getBuyerCountryCode());
+                Country country = null;
+                if(StringUtils.isNotBlank(buyerCountryCode))
+                {
+                    country = SystemCacheQuerier.getCountry(buyerCountryCode);
+
+                }
+                if (country != null)
+                {
+                    countryCell.setCellValue(country.getCnName());
+                }
+                // 运输方式
+                XSSFCell logisticsTypeCell = row.createCell(cellNum++);
+                Integer logisticsType = Optional.ofNullable(reparation.getLogisticsType()).filter(t -> t > 0).orElse(order == null ? null : order.getLogisticsType());
+                if (logisticsType != null)
+                {
+                    TransportationMode transportationMode = TransportationModeCacheUtils.getTransportationMode(logisticsType);
+                    logisticsTypeCell.setCellValue(transportationMode == null ? null : transportationMode.getTransportationModeDisplay());
+                }
+                // 发货日期
+                XSSFCell deliverDateCell = row.createCell(cellNum++);
+                Timestamp deliverDate = Optional.ofNullable(reparation.getDeliverDate()).orElse(order == null ? null : order.getDeliverDate());
+                if (deliverDate != null)
+                {
+                    deliverDateCell.setCellValue(sdf.format(deliverDate));
+                }
+
+                // 是否丢包
+                XSSFCell isLostCell = row.createCell(cellNum++);
+                Integer isLost = reparation.getIsLost();
+                if (isLost != null) 
+                {
+                    isLostCell.setCellValue(LostStatus.build(isLost.toString()).display());  
+                }
+                else 
+                {
+                    isLostCell.setCellValue(""); 
+                }
+               
+                // 原因描述
+                XSSFCell remarkCell = row.createCell(cellNum++);
+                remarkCell.setCellValue(reparation.getRemark());
+                // 应赔偿金额
+                XSSFCell reparationTotalAmountCell = row.createCell(cellNum++);
+                Double reparationTotalAmount = reparation.getReparationTotalAmount();
+                reparationTotalAmountCell.setCellValue(reparationTotalAmount);
+
+                // 调整金额，调整赔偿时间
+                XSSFCell adjustmentAmountCell = row.createCell(cellNum++);
+                XSSFCell adjustReparationDateCell = row.createCell(cellNum++);
+                AtomicReference<String> adjustmentAmountCellValue = new AtomicReference<>("");
+                AtomicReference<String> lastAdjustmentDateCellValue = new AtomicReference<>("");
+                final Integer[] xx = new Integer[1];
+
+                List<ReparationItem> reparationItems = reparation.getReparationItems();
+
+                // 赔偿时间逆序
+                if(CollectionUtil.isNotEmpty(reparationItems))
+                {
+                    reparationItems.sort(Comparator.comparing(ReparationItem::getCreateTime).reversed());
+
+                    // 调整金额和调整赔偿时间如果有跨月需分月汇总
+                    Map<Integer, List<ReparationItem>> monthGroupMap = reparationItems.stream()
+                            .collect(Collectors.groupingBy(r -> r.getCreateTime().getMonthValue()));
+                    if (monthGroupMap.size() > 1)
+                    {
+                        monthGroupMap.forEach((month, items) -> {
+                            Double adjustmentAmount = items.stream().mapToDouble(ReparationItem::getReparationAmount).sum();
+                            String adjustmentAmountCellValueJoin = org.apache.commons.lang3.StringUtils.join(adjustmentAmountCellValue.toString(), month, "月调整金额合计：", adjustmentAmount, "\r\n");
+                            String lastAdjustmentDate = items.get(0).getCreateTime().toString().replace("T"," ");
+                            String lastAdjustmentDateCellValueJoin = org.apache.commons.lang3.StringUtils.join(lastAdjustmentDateCellValue.toString(), month, "月最后调整时间：", lastAdjustmentDate, "\r\n");
+                            xx[0] = 1;
+                            adjustmentAmountCellValue.set(adjustmentAmountCellValueJoin);
+                            lastAdjustmentDateCellValue.set(lastAdjustmentDateCellValueJoin);
+                        });
+                    }
+                    else if (monthGroupMap.size() == 1)
+                    {
+                        Double adjustmentAmount = reparationItems.stream().mapToDouble(ReparationItem::getReparationAmount).sum();
+                        adjustmentAmountCellValue.set("当月调整金额：" + adjustmentAmount);
+                        String lastAdjustmentDate = reparationItems.get(0).getCreateTime().toString().replace("T"," ");
+                        lastAdjustmentDateCellValue.set("当月最后调整时间：" + lastAdjustmentDate);
+                    }
+                }
+                // 自动换行
+                adjustmentAmountCell.setCellStyle(cellStyle);
+                adjustReparationDateCell.setCellStyle(cellStyle);
+                adjustmentAmountCell.setCellValue(adjustmentAmountCellValue.get());
+                adjustReparationDateCell.setCellValue(lastAdjustmentDateCellValue.get());
+
+                // 最终已赔款金额
+                XSSFCell reparationFinalAmountCell = row.createCell(cellNum++);
+                reparationFinalAmountCell.setCellValue(reparation.getReparatedAmount());
+
+                // 是否已赔偿
+                XSSFCell isReparationCell = row.createCell(cellNum++);
+                isReparationCell.setCellValue(reparation.getIsReparated() ? "已赔偿" : "未赔偿");
+
+                // 确认人
+                XSSFCell reparationByCell = row.createCell(cellNum++);
+                String reparationName = PageNameUtils.getFullName(reparation.getReparationBy());
+                reparationByCell.setCellValue(reparationName);
+
+                // 赔偿时间
+                XSSFCell reparationDateCell = row.createCell(cellNum++);
+                if (reparation.getReparationDate() != null)
+                {
+                    reparationDateCell.setCellValue(sdf.format(reparation.getReparationDate()));
+                }
+                // 审批人
+                XSSFCell confirmedByCell = row.createCell(cellNum++);
+                String ConfirmedFullName = PageNameUtils.getFullName(reparation.getConfirmedBy());
+                confirmedByCell.setCellValue(ConfirmedFullName);
+            }
+
+            wb.write(outputStream);
+        }
+        catch (IOException e)
+        {
+            logger.error(e.getMessage(), e);
+        }
+        finally
+        {
+            try
+            {
+                wb.close();
+            }
+            catch (IOException e)
+            {
+                logger.error(e.getMessage(), e);
+            }
+        }
+    }
+
+    /**
+     * 汇总导出
+     * 
+     * @param reparations
+     * @param output
+     * @param orders 
+     * @throws IOException 
+     */
+    public static void exportSummary(List<Reparation> reparations, OutputStream output, List<Order> orders) throws IOException
+    {
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("exportSummary(List<reparations>) - start");
+        }
+
+        // 建立新XSSFWorkbook对象
+        XSSFWorkbook wb = new XSSFWorkbook();
+        XSSFSheet sheet = wb.createSheet("汇总导出");
+        // 表头
+        XSSFRow titleRow = sheet.createRow(0);
+        String[] titleArr = { "订单号", "跟踪号", "国家", "运输方式", "发货月份", "已赔偿金额", "赔偿月份", "部门", "平台", "赔偿方式", "赔偿详情", "卖家账号站点", "导入次数"};
+        for (int i = 0; i < titleArr.length; i++)
+        {
+            XSSFCell cell = titleRow.createCell(i);
+            cell.setCellValue(titleArr[i]);
+            // 设置每一个格子的宽度
+            sheet.setColumnWidth(i, 30 * 150);
+        }
+
+        if (CollectionUtils.isNotEmpty(reparations))
+        {
+            int rolSize = 0;
+
+            // key: 订单号
+            Map<Integer, Order> orderMap = orders.stream().collect(Collectors.toMap(Order::getOrderId, a -> a, (k1, k2) -> k1));
+            for (Reparation reparation : reparations)
+            {
+                // 创建一行
+                int cellNum = 0;
+                XSSFRow row = sheet.createRow(++rolSize);
+
+                // 订单号
+                XSSFCell orderCell = row.createCell(cellNum++);
+                orderCell.setCellValue(reparation.getOrderId());
+
+                // 订单跟踪号
+                XSSFCell trackingNumberCell = row.createCell(cellNum++);
+                trackingNumberCell.setCellValue(reparation.getTrackingNumber());
+
+                // 国家
+                XSSFCell countryCell = row.createCell(cellNum++);
+                Country country = StringUtils.isNotBlank(reparation.getBuyerCountryCode()) ? SystemCacheQuerier.getCountry(reparation.getBuyerCountryCode()) : null;
+                if (country != null)
+                {
+                    countryCell.setCellValue(country.getCnName());
+                }
+
+                // 运输方式
+                XSSFCell logisticsTypeCell = row.createCell(cellNum++);
+                TransportationMode transportationMode = TransportationModeCacheUtils.getTransportationMode(reparation.getLogisticsType());
+                if (transportationMode != null)
+                {
+                    logisticsTypeCell.setCellValue(transportationMode.getTransportationModeDisplay());
+                }
+
+                // 发货月份
+                XSSFCell deliverDateCell = row.createCell(cellNum++);
+                if (reparation.getDeliverDate() != null)
+                {
+                    deliverDateCell.setCellValue(DateUtils.timeToString(reparation.getDeliverDate(), DateUtils.DATE_FORMAT_YEAR_MONTH));
+                }
+
+                // 已赔偿金额
+                XSSFCell reparatedAmountCell = row.createCell(cellNum++);
+                reparatedAmountCell.setCellValue(reparation.getReparatedAmount());
+
+                // 赔偿月份
+                XSSFCell reparationDateCell = row.createCell(cellNum++);
+                if (reparation.getReparationDate() != null)
+                {
+                    reparationDateCell.setCellValue(DateUtils.timeToString(reparation.getReparationDate(), DateUtils.DATE_FORMAT_YEAR_MONTH));
+                }
+
+                // 部门
+                XSSFCell departmentNameCell = row.createCell(cellNum++);
+
+                // 平台
+                XSSFCell platformCell = row.createCell(cellNum++);
+
+                // 赔偿方式
+                XSSFCell reparatMethodCell = row.createCell(cellNum++);
+                reparatMethodCell.setCellValue(reparation.getReparatMethod());
+
+                // 赔偿详情
+                XSSFCell reparatDetailsCell = row.createCell(cellNum++);
+                reparatDetailsCell.setCellValue(reparation.getReparatDetails());
+                
+                // 卖家账号站点
+                XSSFCell siteCell = row.createCell(cellNum++);
+
+                // 导入次数
+                row.createCell(cellNum++).setCellValue(reparation.getImportCount());
+
+                Order order = orderMap.get(reparation.getOrderId());
+                if (order != null)
+                {
+                    String departmentName = OrderDepartmentUtils.getDepartmentNameFromCache(order);
+                    departmentNameCell.setCellValue(departmentName);
+
+                    Platform platform = Platform.build(order.getPlatform() + "");
+                    if (platform != null)
+                    {
+                        platformCell.setCellValue(platform.display());
+                    }
+
+                    String siteCode = "";
+                    if (CollectionUtils.isNotEmpty(order.getOrderItems()))
+                    {
+                        String defaultSite = order.getOrderItems().get(0).getSite();
+                        if (StringUtils.isNotBlank(defaultSite))
+                        {
+                            AmazonSite amazonSite = AmazonSite.buildByMarketplaceId(defaultSite);
+                            if (amazonSite != null)
+                            {
+                                siteCode = "__" + amazonSite.code();
+                                if (siteCode.equalsIgnoreCase("__us"))
+                                {
+                                    siteCode = "__om";
+                                }
+                            }
+                        }
+                    }
+                    siteCell.setCellValue(order.getSellerId() + siteCode);
+                    if (platform == Platform.AMAZON)
+                    {
+                        siteCell.setCellValue(CommonUtils.fuzzySensitiveInfoForFinance(order.getSellerId()) + siteCode);
+                    }
+
+                    trackingNumberCell.setCellValue(order.getTrackingNumber());
+                    country = StringUtils.isNotBlank(order.getBuyerCountryCode()) ? SystemCacheQuerier.getCountry(order.getBuyerCountryCode()) : null;
+                    if (country != null)
+                    {
+                        countryCell.setCellValue(country.getCnName());
+                    }
+                    transportationMode = TransportationModeCacheUtils.getTransportationMode(order.getLogisticsType());
+                    if (transportationMode != null)
+                    {
+                        logisticsTypeCell.setCellValue(transportationMode.getTransportationModeDisplay());
+                    }
+                    if (order.getDeliverDate() != null)
+                    {
+                        deliverDateCell.setCellValue(DateUtils.timeToString(order.getDeliverDate(), DateUtils.DATE_FORMAT_YEAR_MONTH));
+                    }
+                }
+            }
+        }
+
+        try
+        {
+            wb.write(output);
+        }
+        catch (IOException e)
+        {
+            logger.error("exportSummary(List<Reparation>) - exception ignored", e);
+        }
+        finally
+        {
+            wb.close();
+        }
+
+        if (logger.isDebugEnabled())
+        {
+            logger.debug("exportSummary(List<Reparation>) - end");
+        }
+    }
+}

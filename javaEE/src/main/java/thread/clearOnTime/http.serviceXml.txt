@@ -1,0 +1,41 @@
+所在位置：resource-spring
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<!-- 请求配置构建器 -->
+	<bean id="requestConfigBuilder" class="org.apache.http.client.config.RequestConfig"
+		factory-method="custom">
+		<!-- 创建连接的最长时间 -->
+		<property name="connectTimeout" value="20000" />
+		<!-- 从连接池中获取到连接的最长时间 -->
+		<property name="connectionRequestTimeout" value="10000" />
+		<!-- 数据传输的最长时间 -->
+		<property name="socketTimeout" value="60000" />
+		<!-- 提交请求前测试连接是否可用 -->
+		<property name="staleConnectionCheckEnabled" value="true" />
+	</bean>
+
+	<!-- 定期清理无效连接 -->
+	<bean class="com.bessky.platform.http.IdleConnectionEvictor">
+		<constructor-arg ref="httpClientConnectionManager" />
+
+		可注入值给类，如name="xx" value="xx" ref为引用的bean-httpClientConnectionManager
+		依赖注入最后发展成注解@
+	</bean>
+
+</beans>
+
+	<!-- 连接管理器 -->
+	<bean id="httpClientConnectionManager"
+		class="org.apache.http.impl.conn.PoolingHttpClientConnectionManager"
+		destroy-method="close">
+		<!-- 设置最大连接数 -->
+		<property name="maxTotal" value="200" />
+		<!-- 设置每个主机的并发数 -->
+		<property name="defaultMaxPerRoute" value="50" />
+	</bean>
