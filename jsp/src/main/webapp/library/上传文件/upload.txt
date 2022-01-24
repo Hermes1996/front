@@ -1,0 +1,47 @@
+@RequestMapping(value = "upload/file", method = {RequestMethod.POST})
+	@ResponseBody
+	public Map<String, List<FileMeta>> uploadFile(@RequestParam("file") MultipartFile file, @ModelAttribute("domain") OrderClaimDo domain, HttpServletRequest request)
+	{
+
+		List<FileMeta> fileMetas = new ArrayList<FileMeta>();
+		if (file != null && file.getSize() > 0)
+		{
+			String fileName = file.getOriginalFilename();
+			// 文件后缀名
+			String fileExtName = fileName.substring(fileName.lastIndexOf(".") + 1);
+
+			try
+			{
+				byte[] fileByte = file.getBytes();
+
+				String[] results = fastDFSFacade.uploadFile(fileByte, fileExtName);
+				String fastdfsGroup = results[0];
+				String fastdfsPath = results[1];
+
+				if (StringUtils.isEmpty(fastdfsGroup) || StringUtils.isEmpty(fastdfsPath))
+				{
+					return null;
+				}
+				// 返回到前台
+				FileMeta fileMeta = new FileMeta();
+
+				fileMeta.setName(fileName);
+				fileMeta.setSize(Long.valueOf(file.getSize()).intValue());
+				String filePath = fastdfsGroup + "," + fastdfsPath;
+				fileMeta.setDeleteUrl("order/claim/delete/attachment?path=" + filePath);
+				fileMeta.setUrl(filePath);
+				fileMeta.setThumbnailUrl(filePath);
+
+				fileMetas.add(fileMeta);
+			}
+			catch (IOException e)
+			{
+				logger.error(e.getMessage(), e);
+			}
+		}
+
+		Map<String, List<FileMeta>> files = new HashMap<String, List<FileMeta>>();
+		files.put("files", fileMetas);
+
+		return files;
+	}

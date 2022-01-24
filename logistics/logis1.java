@@ -886,3 +886,55 @@ public class JDWLNewCall extends AbstractLogisticsCall
 
     }
 }
+
+get请求：
+    /**
+     * 获取尾程号
+     *
+     * @param agentMailNo
+     * @return
+     */
+    public ResponseJson getTrackNumber(String agentMailNo)
+    {
+        ResponseJson response = new ResponseJson(StatusCode.FAIL);
+
+        CloseableHttpClient httpClient = getHttpClient();
+        //  http://39.108.221.61/cgi-bin/GInfo.dll?EmsApiTrack&cno=BA738975998211143
+        String url = MessageFormat.format("{0}/GInfo.dll?EmsApiTrack&cno={1}", REQUEST_URL, agentMailNo);
+        HttpGet httpGet = new HttpGet(url);
+
+        CloseableHttpResponse httpResponse = null;
+        try
+        {
+            httpResponse = httpClient.execute(httpGet);
+
+            String responseStr = EntityUtils.toString(httpResponse.getEntity());
+            if (httpResponse.getStatusLine().getStatusCode() == HttpStatus.SC_OK)
+            {
+                String referNumber = StringUtils.substringBetween(responseStr, "<REFER_NBR>", "</REFER_NBR>");
+                String trackNumber = StringUtils.substringBetween(responseStr, "<TRANS_NBR>", "</TRANS_NBR>");
+
+                if (StringUtils.isNotEmpty(referNumber))
+                {
+                    response.setStatus(StatusCode.SUCCESS);
+                    response.getBody().put(LogisticsConstants.AGENT_MAILNO, referNumber);
+                    response.setMessage(trackNumber);
+                }
+                else
+                {
+                    response.setMessage("尾程单号不存在");
+                }
+            }
+        }
+        catch (IOException e)
+        {
+            LOGGER.error(e.getMessage(), e);
+            response.setMessage(e.getMessage());
+        }
+        finally
+        {
+            HttpClientUtils.closeQuietly(httpResponse);
+        }
+
+        return response;
+    }

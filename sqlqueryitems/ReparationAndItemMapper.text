@@ -27,18 +27,27 @@ public class ReparationAndItemMapper extends ReparationMapper
             isExist = true;
         }
 
-        ReparationItem reparationItem = new ReparationItem();
-        reparationItem.setId(rs.getInt("id"));
-        reparationItem.setOrderId(rs.getInt("order_id"));
-        reparationItem.setReparationAmount(rs.getDouble("reparation_amount"));
-        reparationItem.setReparationMethod(rs.getString("reparation_method"));
-        reparationItem.setReparationDetail(rs.getString("reparation_detail"));
-        reparationItem.setLogisticCompany(rs.getString("logistic_company"));
-        reparationItem.setCreateBy(rs.getInt("create_by"));
-        reparationItem.setCreateTime(rs.getTimestamp("create_time").toLocalDateTime());
+        Integer itemId = rs.getInt("id");
+        if (itemId != null && itemId != 0)
+        {
+            ReparationItem reparationItem = new ReparationItem();
 
-        reparation.getReparationItems().add(reparationItem);
+            reparationItem.setId(itemId);
 
+            reparationItem.setOrderId(rs.getInt("order_id"));
+            reparationItem.setReparationAmount(rs.getDouble("reparation_amount"));
+            reparationItem.setReparationMethod(rs.getString("reparation_method"));
+            reparationItem.setReparationDetail(rs.getString("reparation_detail"));
+            reparationItem.setLogisticCompany(rs.getString("logistic_company"));
+            reparationItem.setCreateBy(rs.getInt("create_by"));
+
+            Timestamp timestamp = rs.getTimestamp("create_time");
+            if (timestamp != null)
+            {
+                reparationItem.setCreateTime(timestamp.toLocalDateTime());
+            }
+            reparation.getReparationItems().add(reparationItem);
+        }
         return isExist ? null :reparation;
     }
 }

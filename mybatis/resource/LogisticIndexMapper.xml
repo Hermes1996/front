@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.bessky.logistic.index.mapper.LogisticIndexMapper">
+    <!-- 获取轨迹节点预警数量列表 -->
+    <select id="getTrackNodeWarningCountList" resultType="com.bessky.logistic.index.entity.LogisticIndex">
+        SELECT warning_state AS state, COUNT(1) AS count
+        FROM t_stable_order_track
+        WHERE warning_state IS NOT NULL
+        <if test="authTransportModeIds != null and authTransportModeIds.size() > 0">
+            <foreach item="authTransportModeId" collection="authTransportModeIds" open="AND logistics_type IN(" separator="," close=")">
+                #{authTransportModeId}
+            </foreach>
+        </if>
+        GROUP BY warning_state
+    </select>
+
+
+    <resultMap id="BaseResultMap" type="com.bessky.history.settlement.amazon.entity.AmazonSettlementReport">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="seller_id" property="account" jdbcType="VARCHAR"/>
+        <result column="marketplace_id" property="marketplaceId" jdbcType="VARCHAR"/>
+        <result column="settlement_id" property="settlementId" jdbcType="VARCHAR"/>
+        <result column="total_amount" property="totalAmount" jdbcType="DOUBLE"/>
+        <result column="currency" property="currency" jdbcType="VARCHAR"/>
+        <result column="settlement_start_date" property="settlementStartDate" jdbcType="TIMESTAMP"/>
+        <result column="settlement_end_date" property="settlementEndDate" jdbcType="TIMESTAMP"/>
+        <result column="deposit_date" property="depositDate" jdbcType="TIMESTAMP"/>
+        <result column="creation_date" property="createTime" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!--    重复用-->
+    <sql id="amazon_settlement_report_field">
+        id, seller_id, marketplace_id, settlement_id, total_amount, currency, settlement_start_date,
+        settlement_end_date, deposit_date, creation_date
+    </sql>
+
+
+    <!-- 根据条件获取结算报告列表 -->
+    <select id="getAmazonSettlementReportList" resultMap="BaseResultMap">
+        SELECT
+        <include refid="amazon_settlement_report_field"/>
+        FROM
+        t_amazon_settlement_report_${tableName}
+        <include refid="amazon_settlement_report_query"/>
+    </select>
+
+
+</mapper>

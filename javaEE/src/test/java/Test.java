@@ -15,8 +15,9 @@ public class Test
 {
     public static void main(String[] args)
     {
-        List<Integer> b = new ArrayList<>();
-        b.add(5);
-        System.out.println(b+"\n"+"1");
+        List <String> a = new ArrayList<>();
+        a.add("7863637304392_CP_210");
+        a.subList(a.size()-1,a.size()).clear();
+        System.out.println(a);
     }
 }
